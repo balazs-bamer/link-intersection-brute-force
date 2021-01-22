@@ -52,3 +52,6 @@ CATKIN_IGNORE
 
 launch/__pycache__
 launch/__pycache__/**
+cmake-build-debug/
+cmake-build-debug/**
+

@@ -18,12 +18,13 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(urdf REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 add_executable(linkIntersectionBruteForce src/main-node.cpp)
-ament_target_dependencies(linkIntersectionBruteForce rclcpp)
+ament_target_dependencies(linkIntersectionBruteForce rclcpp urdf)
 target_include_directories(linkIntersectionBruteForce PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)

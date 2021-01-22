@@ -9,7 +9,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
   packageName = 'link-intersection-brute-force'
   nodeName = 'linkIntersectionBruteForce'
-  urdfFilename = 'px150_coll.urdf.xacro'
+  urdfFilename = 'px150_coll.urdf'
   urdf = os.path.join(
     get_package_share_directory(packageName),
     urdfFilename)

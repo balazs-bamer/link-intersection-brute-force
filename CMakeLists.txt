@@ -7,9 +7,9 @@ if(NOT CMAKE_C_STANDARD)
 endif()
 
 # Default to C++14
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
-endif()
+#if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+#endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -23,11 +23,14 @@ find_package(urdf REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(linkIntersectionBruteForce src/main-node.cpp)
+add_executable(linkIntersectionBruteForce src/main-node.cpp include/link-intersection-brute-force/TypedLog.h)
 ament_target_dependencies(linkIntersectionBruteForce rclcpp urdf)
 target_include_directories(linkIntersectionBruteForce PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+  $<INSTALL_INTERFACE:include>
+        3rdparty/cpp-logger
+        3rdparty/cpp-memory-manager
+        include/link-intersection-brute-force)
 
 install(TARGETS linkIntersectionBruteForce
   DESTINATION lib/${PROJECT_NAME})

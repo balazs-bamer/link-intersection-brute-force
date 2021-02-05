@@ -13,8 +13,8 @@
 #include "Log.h"
 
 namespace LogTopics {
-  nowtech::log::TopicInstance system;
-  nowtech::log::TopicInstance dumpUrdf;
+extern nowtech::log::TopicInstance system;
+extern nowtech::log::TopicInstance dumpModel;
 }
 
 constexpr nowtech::log::TaskId cgMaxTaskCount = 23;

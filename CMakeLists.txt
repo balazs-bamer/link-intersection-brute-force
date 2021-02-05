@@ -23,7 +23,7 @@ find_package(urdf REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(linkIntersectionBruteForce src/main-node.cpp include/link-intersection-brute-force/TypedLog.h)
+add_executable(linkIntersectionBruteForce src/main-node.cpp include/link-intersection-brute-force/TypedLog.h src/DumpModel.cpp src/DumpModel.h)
 ament_target_dependencies(linkIntersectionBruteForce rclcpp urdf)
 target_include_directories(linkIntersectionBruteForce PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

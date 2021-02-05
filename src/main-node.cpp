@@ -17,11 +17,12 @@ private:
 public:
   NodeLinkIntersectionBruteForce(int, char** aArgv) : Node("linkIntersectionBruteForce") {
     mModel.initFile(std::string{aArgv[csUrdfArgumentIndex]});
-    Log::i(LogTopics::dumpUrdf) << mModel.getName() << Log::end;
     mModel.initTree(mParentLinkTree);
     mModel.initRoot(mParentLinkTree);
-    Log::i(LogTopics::dumpUrdf) << mModel.getRoot()->name << Log::end;
-    dumpModelInfo(mModel, mParentLinkTree);
+  }
+
+  void dumpModelInfo() {
+    ::dumpModelInfo(mModel, mParentLinkTree);
   }
 
 private:
@@ -40,9 +41,10 @@ int main(int aArgc, char **aArgv) {
   LogSender::init();
   Log::init(logConfig);
   Log::registerTopic(LogTopics::system, "system");
-  Log::registerTopic(LogTopics::dumpUrdf, "dumpUrdf");
+  Log::registerTopic(LogTopics::dumpModel, "dumpUrdf");
   Log::registerCurrentTask("main");
   auto node = std::make_shared<NodeLinkIntersectionBruteForce>(aArgc, aArgv);
+  node.get()->dumpModelInfo();
   rclcpp::spin_some(node);
   Log::unregisterCurrentTask();
   Log::done();

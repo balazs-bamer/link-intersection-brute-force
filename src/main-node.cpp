@@ -2,23 +2,31 @@
 
 #include "TypedLog.h"
 #include "DumpModel.h"
+#include "EigenMeshModel.h"
 #include "rclcpp/rclcpp.hpp"
 #include "urdf/model.h"
 #include <string>
 #include <map>
+#include <unordered_set>
+#include <fstream>
 
 class NodeLinkIntersectionBruteForce final : public rclcpp::Node {
 private:
-  static constexpr int csUrdfArgumentIndex = 1;
+  static constexpr int csArgumentIndexUrdf           = 1;
+  static constexpr int csArgumentIndexForbiddenLinks = 2;
 
-  urdf::Model mModel;
-  std::map<std::string, std::string> mParentLinkTree;
+  urdf::Model                             mModel;
+  std::map<std::string, std::string>      mParentLinkTree;
+  std::unique_ptr<fragor::EigenMeshModel> mEigenModel;
+  std::unordered_set<std::string>         mForbiddenLinks;
 
 public:
   NodeLinkIntersectionBruteForce(int, char** aArgv) : Node("linkIntersectionBruteForce") {
-    mModel.initFile(std::string{aArgv[csUrdfArgumentIndex]});
+    mModel.initFile(std::string{aArgv[csArgumentIndexUrdf]});
     mModel.initTree(mParentLinkTree);
     mModel.initRoot(mParentLinkTree);
+    readForbiddenLinks(aArgv[csArgumentIndexForbiddenLinks]);
+    mEigenModel = std::make_unique<fragor::EigenMeshModel>(mModel, mParentLinkTree, mForbiddenLinks);
   }
 
   void dumpModelInfo() {
@@ -26,6 +34,19 @@ public:
   }
 
 private:
+  void readForbiddenLinks(char const * const aFilename) {
+    std::ifstream in{aFilename};
+    while(true) {
+      std::string line;
+      std::getline(in, line);
+      if(!in.good()) {
+        break;
+      }
+      else { // nothing to do
+      }
+      mForbiddenLinks.insert(line);
+    }
+  }
 };
 
 namespace LogTopics {
@@ -43,6 +64,9 @@ int main(int aArgc, char **aArgv) {
   Log::registerTopic(LogTopics::system, "system");
   Log::registerTopic(LogTopics::dumpModel, "dumpUrdf");
   Log::registerCurrentTask("main");
+  for(int i = 0; i < aArgc; ++i) {
+    Log::n() << aArgv[i] << Log::end;
+  }
   auto node = std::make_shared<NodeLinkIntersectionBruteForce>(aArgc, aArgv);
   node.get()->dumpModelInfo();
   rclcpp::spin_some(node);

@@ -7,6 +7,6 @@
 
 #include "urdf/model.h"
 
-void dumpModelInfo (urdf::Model &aModel, std::map<std::string, std::string> &aParentLinkTree);
+void dumpModelInfo (urdf::Model const &aModel, std::map<std::string, std::string> const &aParentLinkTree);
 
 #endif //LINK_INTERSECTION_BRUTE_FORCE_DUMPMODEL_H

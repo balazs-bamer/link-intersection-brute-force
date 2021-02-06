@@ -13,12 +13,16 @@ def generate_launch_description():
   urdf = os.path.join(
     get_package_share_directory(packageName),
     urdfFilename)
+  forbiddenLinksFilename = 'forbidden-links.txt'
+  forbiddenLinks = os.path.join(
+    get_package_share_directory(packageName),
+    forbiddenLinksFilename)
   return LaunchDescription([
     Node(
       package = packageName,
       namespace = 'cudaTrajectoryPlanner',
       executable = nodeName,
       name = nodeName,
-      arguments = [urdf]
+      arguments = [urdf, forbiddenLinks]
     )
   ])

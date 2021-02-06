@@ -56,7 +56,7 @@ void dumpModelInfo(urdf::JointConstSharedPtr aJoint) {
   }
 }
 
-void dumpModelInfo (urdf::Model &aModel, std::map<std::string, std::string> &aParentLinkTree) {
+void dumpModelInfo (urdf::Model const &aModel, std::map<std::string, std::string> const &aParentLinkTree) {
   Log::i(LogTopics::dumpModel) << aModel.getName() << Log::end;
   Log::i(LogTopics::dumpModel) << aModel.getRoot()->name << Log::end;
   dumpModelInfo(aModel.getRoot());

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(link-intersection-brute-force)
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -8,7 +9,7 @@ endif()
 
 # Default to C++14
 #if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 #endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -23,14 +24,21 @@ find_package(urdf REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(linkIntersectionBruteForce src/main-node.cpp include/link-intersection-brute-force/TypedLog.h src/DumpModel.cpp src/DumpModel.h)
+add_executable(linkIntersectionBruteForce
+        include/link-intersection-brute-force/TypedLog.h
+        src/DumpModel.cpp
+        src/DumpModel.h
+        src/EigenMeshModel.cpp
+        src/EigenMeshModel.h
+        src/main-node.cpp)
 ament_target_dependencies(linkIntersectionBruteForce rclcpp urdf)
 target_include_directories(linkIntersectionBruteForce PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
         3rdparty/cpp-logger
         3rdparty/cpp-memory-manager
-        include/link-intersection-brute-force)
+        include/link-intersection-brute-force
+        /usr/include/eigen3)
 
 install(TARGETS linkIntersectionBruteForce
   DESTINATION lib/${PROJECT_NAME})

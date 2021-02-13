@@ -8,15 +8,25 @@
 #include <stdexcept>
 #include <cstring>
 
+fragor::Transform homogenize(fragor::Translation const &aVector) {
+  fragor::Transform result{aVector};
+  return result;
+}
+
+fragor::Transform homogenize(fragor::Quaternion const &aQuaternion) {
+  fragor::Transform result{aQuaternion.normalized().toRotationMatrix()};
+  return result;
+}
+
 fragor::EigenMeshJointLink::EigenMeshJointLink(urdf::Model const &aModel,
                                                Id const aActualLocalRootId,
                                                std::unordered_map<Id, Id> const &aLinkId2parentLinkId,
                                                std::unordered_set<Id> const &aCurrentLimbIds,
                                                std::unordered_map<Id, std::string> const &aId2name)
                                                : mActualLocalRootId(aActualLocalRootId)
-                                               , mFirstLink(aModel.getLink(aId2name.at(aActualLocalRootId)))
-                                               , mJoint(mFirstLink->parent_joint) {
-  for(auto &i : aCurrentLimbIds) { Log::n() << '-' << aId2name.at(i) << Log::end; }
+                                               , mLocalRootLink(aModel.getLink(aId2name.at(aActualLocalRootId)))
+                                               , mJoint(mLocalRootLink->parent_joint) {
+  for(auto &i : aCurrentLimbIds) { Log::n() << '-' << aId2name.at(i) << Log::end; } // TODO remove
 
   auto remainingLinks = aCurrentLimbIds;
   std::list<Id> links2process;
@@ -25,25 +35,14 @@ fragor::EigenMeshJointLink::EigenMeshJointLink(urdf::Model const &aModel,
   while(!links2process.empty()) {
     auto actualLinkId = *(links2process.begin());
     links2process.pop_front();
-    auto coll = aModel.getLink(aId2name.at(actualLinkId))->collision.get();
-    std::string filename;
-    if(coll != nullptr) {
-      auto geomSh{coll->geometry};
-      auto mesh = dynamic_cast<urdf::Mesh *>(geomSh.get());
-      if (mesh != nullptr) {
-        filename = mesh->filename;
-        if(filename.starts_with(csStlNamePrefix)) {
-          filename.erase(0u, std::strlen(csStlNamePrefix));
-        }
-        else { // nothing to do
-        }
-        Log::n() << aId2name.at(actualLinkId) << filename << Log::end;
-      } else {
-        Log::n() << aId2name.at(actualLinkId) << "NONE" << Log::end;
-      }
+    auto link = aModel.getLink(aId2name.at(actualLinkId));
+    auto coll = link->collision.get();
+    std::deque<Vertex> meshes;
+// TODO do we need it?   collectMesh(link->collision, meshes);
+    for(auto &i : link->collision_array) {
+      collectMesh(i, meshes);
     }
-    else { // TODO check how to carry on with transformation chain
-    }
+    // TODO process meshes
     for (auto &i : aLinkId2parentLinkId) {
       if (i.second == actualLinkId) {
         if(remainingLinks.contains(i.first)) {
@@ -51,17 +50,7 @@ fragor::EigenMeshJointLink::EigenMeshJointLink(urdf::Model const &aModel,
           links2process.push_back(i.first);
         }
         else if(!aCurrentLimbIds.contains(i.first)) {  // Found a child with non-fixed joint.
-          auto iterateLinkId = i.first;
-          while(true) {
-            Log::n() << "=>" << aId2name.at(iterateLinkId) << Log::end;
-            if(iterateLinkId == aActualLocalRootId) {
-              break;
-            }
-            else { // nothing to do
-            }
-            iterateLinkId = aLinkId2parentLinkId.at(iterateLinkId);
-          }
-          Log::n() << "=." << Log::end;
+          mChildrenWithTransform.emplace(std::make_pair(i.first, createChildTransform(aModel, i.second, aActualLocalRootId, aLinkId2parentLinkId, aId2name)));
         }
       } else { // nothing to do
       }
@@ -76,6 +65,56 @@ void fragor::EigenMeshJointLink::addChild(std::shared_ptr<EigenMeshJointLink> aC
 
 void fragor::EigenMeshJointLink::addParent(std::shared_ptr<EigenMeshJointLink> aParent) {
   mParent = aParent;
+}
+
+void fragor::EigenMeshJointLink::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<fragor::Vertex> aMeshes) {
+  auto coll = aCollision.get();
+  if(coll != nullptr) {
+    auto geomSh{coll->geometry};
+    auto mesh = dynamic_cast<urdf::Mesh *>(geomSh.get());
+    if (mesh != nullptr) {
+      std::string filename = mesh->filename;
+      if (filename.starts_with(csStlNamePrefix)) {
+        filename.erase(0u, std::strlen(csStlNamePrefix));
+      } else { // nothing to do
+      }
+      Log::n() << filename << Log::end;
+    } else {
+      Log::n() << "NONE" << Log::end;
+    }
+  }
+  else { // TODO find out how to carry on with transforms if this is missing.
+  }
+}
+
+fragor::Transform fragor::EigenMeshJointLink::createChildFixedTransform(urdf::JointSharedPtr aJoint) {
+  fragor::Transform result;
+  // TODO
+  return result;
+}
+
+fragor::EigenMeshJointLink::ChildTransform
+fragor::EigenMeshJointLink::createChildTransform(urdf::Model const &aModel,
+                                                 Id const aDirectParent,
+                                                 Id const aActualLocalRootId,
+                                                 std::unordered_map<Id, Id> const &aLinkId2parentLinkId,
+                                                 std::unordered_map<Id, std::string> const &aId2name) {
+  fragor::EigenMeshJointLink::ChildTransform result;
+  // TODO
+  auto joint = aModel.getLink(aId2name.at(aDirectParent))->parent_joint;
+  auto childFixedTransform = createChildFixedTransform(joint);
+  auto iterateLinkId = aDirectParent;
+  while(true) {
+    Log::n() << "=>" << aId2name.at(iterateLinkId) << Log::end;
+    if(iterateLinkId == aActualLocalRootId) {
+      break;
+    }
+    else { // nothing to do
+    }
+    iterateLinkId = aLinkId2parentLinkId.at(iterateLinkId);
+  }
+  Log::n() << "=." << Log::end;
+  return result;
 }
 
 fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel, std::map<std::string, std::string> const &aParentLinkTree, std::unordered_set<std::string> const aForbiddenLinks) {

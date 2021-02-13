@@ -9,11 +9,13 @@
 #include <map>
 #include <unordered_set>
 #include <fstream>
+#include <regex>
 
 class NodeLinkIntersectionBruteForce final : public rclcpp::Node {
 private:
-  static constexpr int csArgumentIndexUrdf           = 1;
-  static constexpr int csArgumentIndexForbiddenLinks = 2;
+  static constexpr int                    csArgumentIndexUrdf           = 1;
+  static constexpr int                    csArgumentIndexForbiddenLinks = 2;
+  inline static constexpr char            csForbiddenRegex[] = "^[a-zA-Z_][a-zA-Z_/\\-0-9]*$";
 
   urdf::Model                             mModel;
   std::map<std::string, std::string>      mParentLinkTree;
@@ -35,16 +37,21 @@ public:
 
 private:
   void readForbiddenLinks(char const * const aFilename) {
+    std::regex regex(csForbiddenRegex);
     std::ifstream in{aFilename};
     while(true) {
       std::string line;
       std::getline(in, line);
+      if(std::regex_match(line, regex)) {
+        mForbiddenLinks.insert(line);
+      }
+      else { // nothing to do
+      }
       if(!in.good()) {
         break;
       }
       else { // nothing to do
       }
-      mForbiddenLinks.insert(line);
     }
   }
 };
@@ -68,7 +75,7 @@ int main(int aArgc, char **aArgv) {
     Log::n() << aArgv[i] << Log::end;
   }
   auto node = std::make_shared<NodeLinkIntersectionBruteForce>(aArgc, aArgv);
-  node.get()->dumpModelInfo();
+//  node.get()->dumpModelInfo();
   rclcpp::spin_some(node);
   Log::unregisterCurrentTask();
   Log::done();

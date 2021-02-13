@@ -54,4 +54,5 @@ launch/__pycache__
 launch/__pycache__/**
 cmake-build-debug/
 cmake-build-debug/**
-
+3rdparty/
+ros_src/

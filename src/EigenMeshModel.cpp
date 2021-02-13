@@ -16,6 +16,8 @@ fragor::EigenMeshJointLink::EigenMeshJointLink(urdf::Model const &aModel,
                                                : mActualLocalRootId(aActualLocalRootId)
                                                , mFirstLink(aModel.getLink(aId2name.at(aActualLocalRootId)))
                                                , mJoint(mFirstLink->parent_joint) {
+  for(auto &i : aCurrentLimbIds) { Log::n() << '-' << aId2name.at(i) << Log::end; }
+
   auto remainingLinks = aCurrentLimbIds;
   std::list<Id> links2process;
   remainingLinks.erase(aActualLocalRootId);
@@ -48,8 +50,18 @@ fragor::EigenMeshJointLink::EigenMeshJointLink(urdf::Model const &aModel,
           remainingLinks.erase(i.first);
           links2process.push_back(i.first);
         }
-        else {  // Found a child with non-fixed joint.
-          // TODO process
+        else if(!aCurrentLimbIds.contains(i.first)) {  // Found a child with non-fixed joint.
+          auto iterateLinkId = i.first;
+          while(true) {
+            Log::n() << "=>" << aId2name.at(iterateLinkId) << Log::end;
+            if(iterateLinkId == aActualLocalRootId) {
+              break;
+            }
+            else { // nothing to do
+            }
+            iterateLinkId = aLinkId2parentLinkId.at(iterateLinkId);
+          }
+          Log::n() << "=." << Log::end;
         }
       } else { // nothing to do
       }
@@ -82,7 +94,11 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel, std::map<std::
     ++nextId;
   }
   for(auto &i: aParentLinkTree) {
-    linkId2parentLinkId.emplace(name2id[i.first], name2id[i.second]);
+    if(!aForbiddenLinks.contains(i.first) && !aForbiddenLinks.contains(i.second)) {
+      linkId2parentLinkId.emplace(name2id[i.first], name2id[i.second]);
+    }
+    else { // nothing to do
+    }
   }
   std::unordered_set<Id>     links2process;
   links2process.insert(rootId);

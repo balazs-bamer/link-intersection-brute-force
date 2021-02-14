@@ -23,6 +23,6 @@ def generate_launch_description():
       namespace = 'cudaTrajectoryPlanner',
       executable = nodeName,
       name = nodeName,
-      arguments = [urdf, forbiddenLinks]
+      arguments = [urdf, forbiddenLinks, '/home/balazs/munka/cuda-trajectory-planner/ros-workspace/src/link-intersection-brute-force/']
     )
   ])

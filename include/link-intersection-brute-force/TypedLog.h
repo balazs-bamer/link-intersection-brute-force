@@ -10,7 +10,8 @@
 #include "LogSenderRos2.h"
 #include "LogQueueStdBoost.h"
 #include "LogMessageCompact.h"
-#include "Log.h"
+#include "Log.h"                // TODO mention https://github.com/balazs-bamer/cpp-logger.git
+                                // TODO mention https://github.com/balazs-bamer/cpp-memory-manager.git
 
 namespace LogTopics {
 extern nowtech::log::TopicInstance system;

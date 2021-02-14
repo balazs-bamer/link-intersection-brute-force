@@ -25,16 +25,14 @@ find_package(urdf REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 add_executable(linkIntersectionBruteForce
-        include/link-intersection-brute-force/TypedLog.h
         src/DumpModel.cpp
-        src/DumpModel.h
         src/EigenMeshModel.cpp
-        src/EigenMeshModel.h
         src/main-node.cpp)
 ament_target_dependencies(linkIntersectionBruteForce rclcpp urdf)
 target_include_directories(linkIntersectionBruteForce PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
+        3rdparty/stl_reader
         3rdparty/cpp-logger
         3rdparty/cpp-memory-manager
         include/link-intersection-brute-force

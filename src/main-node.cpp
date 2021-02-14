@@ -15,6 +15,7 @@ class NodeLinkIntersectionBruteForce final : public rclcpp::Node {
 private:
   static constexpr int                    csArgumentIndexUrdf           = 1;
   static constexpr int                    csArgumentIndexForbiddenLinks = 2;
+  static constexpr int                    csArgumentIndexMeshLocation   = 3;
   inline static constexpr char            csForbiddenRegex[] = "^[a-zA-Z_][a-zA-Z_/\\-0-9]*$";
 
   urdf::Model                             mModel;
@@ -28,7 +29,7 @@ public:
     mModel.initTree(mParentLinkTree);
     mModel.initRoot(mParentLinkTree);
     readForbiddenLinks(aArgv[csArgumentIndexForbiddenLinks]);
-    mEigenModel = std::make_unique<fragor::EigenMeshModel>(mModel, mParentLinkTree, mForbiddenLinks);
+    mEigenModel = std::make_unique<fragor::EigenMeshModel>(mModel, mParentLinkTree, mForbiddenLinks, aArgv[csArgumentIndexMeshLocation]);
   }
 
   void dumpModelInfo() {

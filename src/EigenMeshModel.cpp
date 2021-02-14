@@ -4,9 +4,12 @@
 
 #include "EigenMeshModel.h"
 #include "TypedLog.h"
+#include "stl_reader.h"      // TODO mention https://github.com/sreiter/stl_reader.git
 #include <list>
 #include <stdexcept>
 #include <cstring>
+
+namespace fragor {
 
 fragor::Transform homogenize(fragor::Translation const &aVector) {
   fragor::Transform result{aVector};
@@ -18,16 +21,20 @@ fragor::Transform homogenize(fragor::Quaternion const &aQuaternion) {
   return result;
 }
 
+}
+
 fragor::EigenMeshJointLink::EigenMeshJointLink(urdf::Model const &aModel,
                                                Id const aActualLocalRootId,
                                                std::unordered_map<Id, Id> const &aLinkId2parentLinkId,
                                                std::unordered_set<Id> const &aCurrentLimbIds,
-                                               std::unordered_map<Id, std::string> const &aId2name)
+                                               std::unordered_map<Id, std::string> const &aId2name,
+                                               std::string const &aMeshRootDirectory)
                                                : mActualLocalRootId(aActualLocalRootId)
                                                , mLocalRootLink(aModel.getLink(aId2name.at(aActualLocalRootId)))
                                                , mJoint(mLocalRootLink->parent_joint) {
   for(auto &i : aCurrentLimbIds) { Log::n() << '-' << aId2name.at(i) << Log::end; } // TODO remove
 
+  std::deque<HomVertex> allTransformedMeshes;
   auto remainingLinks = aCurrentLimbIds;
   std::list<Id> links2process;
   remainingLinks.erase(aActualLocalRootId);
@@ -37,12 +44,16 @@ fragor::EigenMeshJointLink::EigenMeshJointLink(urdf::Model const &aModel,
     links2process.pop_front();
     auto link = aModel.getLink(aId2name.at(actualLinkId));
     auto coll = link->collision.get();
-    std::deque<Vertex> meshes;
-// TODO do we need it?   collectMesh(link->collision, meshes);
+    std::deque<HomVertex> meshes;
+// perhaps needed, but not for this ROS2 implementation   collectMesh(link->collision, meshes);
     for(auto &i : link->collision_array) {
-      collectMesh(i, meshes);
+      collectMesh(i, meshes, aMeshRootDirectory);
     }
-    // TODO process meshes
+    // Some parts will be calculated more than once, but don't care, since there are only few of them.
+    auto transform = createFixedTransforms(aModel, actualLinkId, aActualLocalRootId, aLinkId2parentLinkId, aId2name);
+    std::transform(meshes.begin(), meshes.end(), allTransformedMeshes.begin(), [&transform](HomVertex const& aVertex) -> HomVertex {
+      return transform * aVertex;
+    });
     for (auto &i : aLinkId2parentLinkId) {
       if (i.second == actualLinkId) {
         if(remainingLinks.contains(i.first)) {
@@ -50,26 +61,43 @@ fragor::EigenMeshJointLink::EigenMeshJointLink(urdf::Model const &aModel,
           links2process.push_back(i.first);
         }
         else if(!aCurrentLimbIds.contains(i.first)) {  // Found a child with non-fixed joint.
-          mChildrenWithTransform.emplace(std::make_pair(i.first, createChildTransform(aModel, i.second, aActualLocalRootId, aLinkId2parentLinkId, aId2name)));
+          mChildrenWithTransform.emplace(std::make_pair(i.first, createChildTransform(aModel, i.first, aActualLocalRootId, aLinkId2parentLinkId, aId2name)));
         }
       } else { // nothing to do
       }
     }
   }
+  mMesh.reserve(allTransformedMeshes.size());
+  std::copy(allTransformedMeshes.begin(), allTransformedMeshes.end(), mMesh.begin());
   Log::n() << Log::end;
 }
 
-void fragor::EigenMeshJointLink::addChild(std::shared_ptr<EigenMeshJointLink> aChild) {
+void fragor::EigenMeshJointLink::readMesh(fragor::Transform const &aTransform,
+                                          std::string const aFilename,
+                                          std::deque<HomVertex> &aMeshes,
+                                          std::string const &aMeshRootDirectory) {
+  stl_reader::StlMesh<float, int32_t> mesh(aMeshRootDirectory + aFilename);
+  for(int32_t indexTriangle = 0; indexTriangle < mesh.num_tris(); ++indexTriangle) {
+    for(int32_t indexCorner = 0; indexCorner < 3; ++indexCorner) {
+      float const * const coords = mesh.tri_corner_coords(indexTriangle, indexCorner);
+      Eigen::Vector4f in;
+      for(int32_t i = 0; i < 3; ++i) {
+        in(i) = coords[i];
+      }
+      in(3) = csHomogeneousOne;
+      aMeshes.push_back(aTransform * in);
+    }
+  }
 
 }
 
-void fragor::EigenMeshJointLink::addParent(std::shared_ptr<EigenMeshJointLink> aParent) {
-  mParent = aParent;
-}
-
-void fragor::EigenMeshJointLink::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<fragor::Vertex> aMeshes) {
+void fragor::EigenMeshJointLink::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<fragor::HomVertex> aMeshes, std::string const &aMeshRootDirectory) {
   auto coll = aCollision.get();
   if(coll != nullptr) {
+    auto &pose = coll->origin;
+    Translation translation { pose.position.x, pose.position.y, pose.position.z };
+    Quaternion rotation { pose.rotation.w, pose.rotation.x, pose.rotation.y, pose.rotation.z };
+    Transform transform = homogenize(translation) * homogenize(rotation);
     auto geomSh{coll->geometry};
     auto mesh = dynamic_cast<urdf::Mesh *>(geomSh.get());
     if (mesh != nullptr) {
@@ -78,7 +106,8 @@ void fragor::EigenMeshJointLink::collectMesh(urdf::CollisionSharedPtr aCollision
         filename.erase(0u, std::strlen(csStlNamePrefix));
       } else { // nothing to do
       }
-      Log::n() << filename << Log::end;
+      readMesh(transform, filename, aMeshes, aMeshRootDirectory);
+      Log::n() << filename << aMeshes.size() << Log::end;
     } else {
       Log::n() << "NONE" << Log::end;
     }
@@ -89,35 +118,66 @@ void fragor::EigenMeshJointLink::collectMesh(urdf::CollisionSharedPtr aCollision
 
 fragor::Transform fragor::EigenMeshJointLink::createChildFixedTransform(urdf::JointSharedPtr aJoint) {
   fragor::Transform result;
-  // TODO
+  auto &pose = aJoint->parent_to_joint_origin_transform;
+  Translation translation{pose.position.x, pose.position.y, pose.position.z};
+  Quaternion rotation{pose.rotation.w, pose.rotation.x, pose.rotation.y, pose.rotation.z};
+  if(rotation.vec().norm() < csEpsilon) {
+    result.setIdentity();
+  }
+  else {
+    result = homogenize(translation) * homogenize(rotation);
+  }
   return result;
 }
 
-fragor::EigenMeshJointLink::ChildTransform
-fragor::EigenMeshJointLink::createChildTransform(urdf::Model const &aModel,
-                                                 Id const aDirectParent,
-                                                 Id const aActualLocalRootId,
-                                                 std::unordered_map<Id, Id> const &aLinkId2parentLinkId,
-                                                 std::unordered_map<Id, std::string> const &aId2name) {
-  fragor::EigenMeshJointLink::ChildTransform result;
-  // TODO
-  auto joint = aModel.getLink(aId2name.at(aDirectParent))->parent_joint;
-  auto childFixedTransform = createChildFixedTransform(joint);
-  auto iterateLinkId = aDirectParent;
-  while(true) {
+fragor::Transform fragor::EigenMeshJointLink::createFixedTransforms(urdf::Model const &aModel,
+                                                                    Id const aLeafId,
+                                                                    Id const aActualLocalRootId,
+                                                                    std::unordered_map<Id, Id> const &aLinkId2parentLinkId,
+                                                                    std::unordered_map<Id, std::string> const &aId2name) {
+  Transform result;
+  result.setIdentity();
+  auto iterateLinkId = aLeafId;
+  while(iterateLinkId != aActualLocalRootId) {
+    auto child = aModel.getLink(aId2name.at(iterateLinkId));
+    auto fixedJoint = child->parent_joint;
+    result = createChildFixedTransform(fixedJoint) * result;
     Log::n() << "=>" << aId2name.at(iterateLinkId) << Log::end;
-    if(iterateLinkId == aActualLocalRootId) {
-      break;
-    }
-    else { // nothing to do
-    }
     iterateLinkId = aLinkId2parentLinkId.at(iterateLinkId);
   }
   Log::n() << "=." << Log::end;
   return result;
 }
 
-fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel, std::map<std::string, std::string> const &aParentLinkTree, std::unordered_set<std::string> const aForbiddenLinks) {
+fragor::EigenMeshJointLink::ChildTransform
+fragor::EigenMeshJointLink::createChildTransform(urdf::Model const &aModel,
+                                                 Id const aChildId,
+                                                 Id const aActualLocalRootId,
+                                                   std::unordered_map<Id, Id> const &aLinkId2parentLinkId,
+                                                   std::unordered_map<Id, std::string> const &aId2name) {
+  ChildTransform result;
+  auto movingJoint = aModel.getLink(aId2name.at(aChildId))->parent_joint;
+  auto &axis = movingJoint->axis;
+  Eigen::Vector3f vector{axis.x, axis.y, axis.z};
+  vector.normalize();
+  if (movingJoint->type == urdf::Joint::PRISMATIC) {
+    result.mPossibleUnitDisplacement = Translation{vector};
+    result.mPossibleUnitRotation = Quaternion{0.0f, 1.0f, 0.0f, 0.0f};
+  } else if (movingJoint->type == urdf::Joint::REVOLUTE) {
+    result.mPossibleUnitDisplacement = Translation{0.0f, 0.0f, 0.0f};
+    result.mPossibleUnitRotation = Quaternion{1.0f, vector.x(), vector.y(), vector.z()};
+  } else { // nothing to do
+  }
+  result.mAllFixedTransforms =
+    createFixedTransforms(aModel, aLinkId2parentLinkId.at(aChildId), aActualLocalRootId, aLinkId2parentLinkId, aId2name)
+    * createChildFixedTransform(movingJoint);
+  return result;
+}
+
+fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
+                                       std::map<std::string, std::string> const &aParentLinkTree,
+                                       std::unordered_set<std::string> const aForbiddenLinks,
+                                       std::string const &aMeshRootDirectory) {
   Id nextId = 1;
   std::unordered_map<Id, Id> linkId2parentLinkId;
   std::unordered_map<Id, std::string> id2name;
@@ -172,7 +232,7 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel, std::map<std::
       }
     } while(wasIncrement);
     // now currentLimbIds contains a set of links which are fixed together and will appear as one mesh
-    std::shared_ptr<EigenMeshJointLink> limb = std::make_shared<EigenMeshJointLink>(aModel, actualLocalRootId, linkId2parentLinkId, currentLimbIds, id2name);
+    std::shared_ptr<EigenMeshJointLink> limb = std::make_shared<EigenMeshJointLink>(aModel, actualLocalRootId, linkId2parentLinkId, currentLimbIds, id2name, aMeshRootDirectory);
     for(auto &i : currentLimbIds) {
       mId2limb.emplace(i, limb);
     }

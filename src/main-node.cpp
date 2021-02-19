@@ -73,7 +73,7 @@ int main(int aArgc, char **aArgv) {
   Log::registerTopic(LogTopics::dumpModel, "dumpUrdf");
   Log::registerCurrentTask("main");
   for(int i = 0; i < aArgc; ++i) {
-    Log::n() << aArgv[i] << Log::end;
+    Log::n() << i << aArgv[i] << Log::end;
   }
   auto node = std::make_shared<NodeLinkIntersectionBruteForce>(aArgc, aArgv);
 //  node.get()->dumpModelInfo();

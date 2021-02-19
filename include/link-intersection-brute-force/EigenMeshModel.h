@@ -19,13 +19,17 @@ using Translation = Eigen::Translation<float, 3>;
 using Quaternion  = Eigen::Quaternion<float>;
 using HomVertex   = Eigen::Vector4f;                           // Last coordinate is 1.
 
-class EigenMeshJointLink {
+class Limb {
 private:
   struct ChildTransform {
-    std::shared_ptr<EigenMeshJointLink> mChild;                    // +
-    Transform                           mAllFixedTransforms;       // +
-    Translation                         mPossibleUnitDisplacement; // + Prism direction for prismatic joint.
-    Quaternion                          mPossibleUnitRotation;     // + Rotation axis with 1 radian unit for rotate joint.
+    bool                                mValid = false;
+    float                               mJointLimitLow;
+    float                               mJointLimitHigh;
+    float                               mJointLimitEffort;
+    float                               mJointLimitVelocity;
+    Transform                           mAllFixedTransforms;
+    Translation                         mPossibleUnitDisplacement; // Prism direction for prismatic joint.
+    Quaternion                          mPossibleUnitRotation;     // Rotation axis with 1 radian unit for rotate joint.
     // Transforms come so from local parent to non-fixed joint child:
     // 1. All of fixed transform across the fixed joints.
     // 2. Constant displacement for this joint.
@@ -36,25 +40,28 @@ private:
   static constexpr float                 csHomogeneousOne  = 1.0f;
   inline static constexpr char           csStlNamePrefix[] = "package://";
 
-  Id const                               mActualLocalRootId;     // +
-  urdf::LinkConstSharedPtr const         mLocalRootLink;         // +
-  urdf::JointSharedPtr     const         mJoint;                 // + Joint holding this stuff.
-  std::weak_ptr<EigenMeshJointLink>      mParent;                // + Used to travel backwards for composition.
-  std::vector<HomVertex>                 mMesh;                  // + Cumulative, in the mesh coordinate space of the local root link.
-  std::unordered_map<Id, ChildTransform> mChildrenWithTransform; // + Maps from the child's local root id to the actual struct.
-  // These are identity for root.
-  Eigen::Matrix4f                        mCumulativeTransform;   // Everything in the tree up to and including this local root? TODO consider
+  // TODO later incorporate inertia calculated for the whole limb.
+  Id const                                      mActualLocalRootId;
+  ChildTransform                                mOwnTransform;
+  urdf::LinkConstSharedPtr const                mLocalRootLink;
+  urdf::JointSharedPtr     const                mJoint;                 // Joint holding this stuff.
+  std::weak_ptr<Limb>                           mParent;                // Used to travel backwards for composition.
+  std::vector<HomVertex>                        mMesh;                  // Cumulative, in the mesh coordinate space of the local root link.
+  std::unordered_map<Id, std::shared_ptr<Limb>> mChildren;              // Maps from the child's local root id to the actual object
+  std::unordered_map<Id, ChildTransform>        mChildTransforms;       // Maps from the child's local root id to its transform.
 
 public:
-  EigenMeshJointLink(urdf::Model const &aModel,
-                     Id const aActualLocalRootId,
-                     std::unordered_map<Id, Id> const &aLinkId2parentLinkId,
-                     std::unordered_set<Id> const &aCurrentLimbIds,
-                     std::unordered_map<Id, std::string> const &aId2name,
-                     std::string const &aMeshRootDirectory);
-  void addChild(std::shared_ptr<EigenMeshJointLink> aChild) { mChildrenWithTransform[aChild->getLocalRootId()].mChild = aChild; }
-  void addParent(std::shared_ptr<EigenMeshJointLink> aParent) { mParent = aParent; }
-  Id   getLocalRootId() const { return mActualLocalRootId; }
+  Limb(urdf::Model const &aModel,
+       Id const aActualLocalRootId,
+       std::unordered_map<Id, Id> const &aLinkId2parentLinkId,
+       std::unordered_set<Id> const &aCurrentLimbIds,
+       std::unordered_map<Id, std::string> const &aId2name,
+       std::string const &aMeshRootDirectory);
+  void addChild(std::shared_ptr<Limb> const &aChild);
+  void addParent(std::shared_ptr<Limb> const &aParent) { mParent = aParent; }
+  Id   getLocalRootId() const                          { return mActualLocalRootId; }
+  ChildTransform const &getTransform() const           { return mOwnTransform; }
+  urdf::LinkConstSharedPtr getLocalRootLink() const    { return mLocalRootLink; }
 
 private:
   void                  readMesh(Transform const &aTransform,
@@ -77,9 +84,10 @@ private:
 
 class EigenMeshModel final {
 private:
-  std::shared_ptr<EigenMeshJointLink>                         mRoot;
-  std::unordered_map<Id, std::shared_ptr<EigenMeshJointLink>> mId2limb;
-  std::unordered_map<Id, Id>                                  mId2subRoot;
+  std::shared_ptr<Limb>                         mRoot;
+  std::unordered_map<Id, std::shared_ptr<Limb>> mId2limb;
+  std::unordered_map<Id, Id>                    mId2parentId;
+// TODO probably remove  std::unordered_map<Id, Id>                    mId2localRootId;  // Maps every original Id to its local root Id in the limb.
 
 public:
   EigenMeshModel(urdf::Model const &aModel,

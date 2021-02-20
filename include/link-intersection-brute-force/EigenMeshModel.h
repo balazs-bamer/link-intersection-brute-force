@@ -84,10 +84,11 @@ private:
 
 class EigenMeshModel final {
 private:
-  std::shared_ptr<Limb>                         mRoot;
-  std::unordered_map<Id, std::shared_ptr<Limb>> mId2limb;
-  std::unordered_map<Id, Id>                    mId2parentId;
-// TODO probably remove  std::unordered_map<Id, Id>                    mId2localRootId;  // Maps every original Id to its local root Id in the limb.
+  static constexpr Id   csNoParent = -1;
+
+  std::shared_ptr<Limb>              mRoot;
+  std::vector<Id>                    mParentOfIndex;  // For each index, its parent is in the array. For root, -1.
+  std::vector<std::shared_ptr<Limb>> mLimbs;
 
 public:
   EigenMeshModel(urdf::Model const &aModel,

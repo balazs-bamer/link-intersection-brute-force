@@ -63,7 +63,7 @@ nowtech::log::TopicInstance dumpModel;
 }
 
 // args as in launch:
-// /home/balazs/munka/cuda-trajectory-planner/ros-workspace/install/link-intersection-brute-force/share/link-intersection-brute-force/px150_coll.urdf --ros-args -r __node:=linkIntersectionBruteForce -r __ns:=/cudaTrajectoryPlanner
+// /home/balazs/munka/cuda-trajectory-planner/ros-workspace/install/link-intersection-brute-force/share/link-intersection-brute-force/px150_coll.urdf /home/balazs/munka/cuda-trajectory-planner/ros-workspace/install/link-intersection-brute-force/share/link-intersection-brute-force/forbidden-links.txt /home/balazs/munka/cuda-trajectory-planner/ros-workspace/src/link-intersection-brute-force/ --ros-args -r __node:=linkIntersectionBruteForce -r __ns:=/cudaTrajectoryPlanner
 int main(int aArgc, char **aArgv) {
   rclcpp::init(aArgc, aArgv);
   nowtech::log::LogFormatConfig logConfig;

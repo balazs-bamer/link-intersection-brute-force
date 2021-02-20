@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.5)
 project(link-intersection-brute-force)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
+set(CMAKE_C_COMPILER "/usr/bin/gcc")
+set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
@@ -13,7 +16,7 @@ endif()
 #endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic -Og -ggdb)
+  add_compile_options(-Wall -Wextra -Wpedantic -Og -ggdb -D_GLIBCXX_DEBUG)
 endif()
 
 # find dependencies

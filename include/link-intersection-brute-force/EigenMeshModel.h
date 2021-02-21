@@ -45,9 +45,9 @@ private:
   ChildTransform                                mOwnTransform;
   urdf::LinkConstSharedPtr const                mLocalRootLink;
   urdf::JointSharedPtr     const                mJoint;                 // Joint holding this stuff.
-  std::weak_ptr<Limb>                           mParent;                // Used to travel backwards for composition.
+  Limb const *                                  mParent;                // Used to travel backwards for composition.
   std::vector<HomVertex>                        mMesh;                  // Cumulative, in the mesh coordinate space of the local root link.
-  std::unordered_map<Id, std::shared_ptr<Limb>> mChildren;              // Maps from the child's local root id to the actual object
+  std::unordered_map<Id, Limb const*>           mChildren;              // Maps from the child's local root id to the actual object
   std::unordered_map<Id, ChildTransform>        mChildTransforms;       // Maps from the child's local root id to its transform.
 
 public:
@@ -57,8 +57,9 @@ public:
        std::unordered_set<Id> const &aCurrentLimbIds,
        std::unordered_map<Id, std::string> const &aId2name,
        std::string const &aMeshRootDirectory);
-  void addChild(std::shared_ptr<Limb> const &aChild);
-  void addParent(std::shared_ptr<Limb> const &aParent) { mParent = aParent; }
+  ~Limb() = default;
+  void addChild(Limb * const aChild);
+  void addParent(Limb const * const aParent) { mParent = aParent; }
   Id   getLocalRootId() const                          { return mActualLocalRootId; }
   ChildTransform const &getTransform() const           { return mOwnTransform; }
   urdf::LinkConstSharedPtr getLocalRootLink() const    { return mLocalRootLink; }
@@ -86,9 +87,9 @@ class EigenMeshModel final {
 private:
   static constexpr Id   csNoParent = -1;
 
-  std::shared_ptr<Limb>              mRoot;
+  Limb const*                        mRoot;
   std::vector<Id>                    mParentOfIndex;  // For each index, its parent is in the array. For root, -1.
-  std::vector<std::shared_ptr<Limb>> mLimbs;
+  std::vector<std::unique_ptr<Limb>> mLimbs;
 
 public:
   EigenMeshModel(urdf::Model const &aModel,

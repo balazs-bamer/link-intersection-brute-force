@@ -72,7 +72,7 @@ fragor::Limb::Limb(urdf::Model const &aModel,
   Log::n() << Log::end;
 }
 
-void fragor::Limb::addChild(std::shared_ptr<Limb> const &aChild) {
+void fragor::Limb::addChild(Limb * const aChild) {
   auto childId = aChild->getLocalRootId();
   mChildren[childId] = aChild;
   aChild->mOwnTransform = mChildTransforms[childId];
@@ -190,7 +190,7 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
                                        std::unordered_set<std::string> const aForbiddenLinks,
                                        std::string const &aMeshRootDirectory) {
   Id nextId = 1;
-  std::unordered_map<Id, std::shared_ptr<Limb>> id2limb;
+  std::unordered_map<Id, std::unique_ptr<Limb>> id2limb;
   std::unordered_map<Id, Id>                    id2parentId;
   std::unordered_map<Id, Id>                    linkId2parentLinkId;
   std::unordered_map<Id, std::string>           id2name;
@@ -244,21 +244,22 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
       }
     } while(wasIncrement);
     // now currentLimbIds contains a set of links which are fixed together and will appear as one mesh
-    std::shared_ptr<Limb> limb = std::make_shared<Limb>(aModel, actualLocalRootId, linkId2parentLinkId, currentLimbIds, id2name, aMeshRootDirectory);
-    id2limb.emplace(limb->getLocalRootId(), limb);
+    std::unique_ptr<Limb> limbUnique = std::make_unique<Limb>(aModel, actualLocalRootId, linkId2parentLinkId, currentLimbIds, id2name, aMeshRootDirectory);
+    auto limbPointer = limbUnique.get();
+    id2limb.emplace(limbPointer->getLocalRootId(), std::move(limbUnique));
     if(actualLocalRootId == rootId) {
-      mRoot = limb;
+      mRoot = limbPointer;
     }
     else {
       auto possibleParentId = linkId2parentLinkId[actualLocalRootId];
       while(!id2limb.contains(possibleParentId)) {
         possibleParentId = linkId2parentLinkId[possibleParentId];
       }
-      auto parent = id2limb[possibleParentId];
-      parent->addChild(limb);
-      limb->addParent(parent);
-      id2parentId.emplace(limb->getLocalRootId(), parent->getLocalRootId());
-      Log::n() << "  -=-  " << parent->getLocalRootId() << " ->" << limb->getLocalRootId() << Log::end;
+      auto parentPointer = id2limb[possibleParentId].get();
+      parentPointer->addChild(limbPointer);
+      limbPointer->addParent(parentPointer);
+      id2parentId.emplace(limbPointer->getLocalRootId(), parentPointer->getLocalRootId());
+      Log::n() << "  -=-  " << parentPointer->getLocalRootId() << " ->" << limbPointer->getLocalRootId() << Log::end;
     }
   }
   // TODO remove log
@@ -271,10 +272,11 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
   mLimbs.reserve(id2limb.size());
   std::unordered_map<Id, Id> id2seq;
   Id seq = 0u;
-  for(auto &i: id2limb) {
+  for(auto &i : id2limb) {
     mParentOfIndex[seq] = csNoParent;
     id2seq.emplace(i.first, seq);
-    mLimbs[seq++] = i.second;
+    mLimbs.emplace(mLimbs.end(), std::move(i.second));
+    ++seq;
   }
   for(auto &i: id2parentId) {
     mParentOfIndex[id2seq[i.first]] = id2seq[i.second];

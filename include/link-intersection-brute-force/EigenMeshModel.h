@@ -72,7 +72,7 @@ private:
                                  std::string const aFilename,
                                  std::deque<HomVertex> &aMeshes,
                                  std::string const &aMeshRootDirectory);
-  void                  collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<HomVertex> aMeshes, std::string const &aMeshRootDirectory);
+  void                  collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<HomVertex> &aMeshes, std::string const &aMeshRootDirectory);
   static Transform      createChildFixedTransform(urdf::JointSharedPtr aJoint);
   static Transform      createFixedTransforms(urdf::Model const &aModel,
                                               Id const aLeafId,

@@ -49,7 +49,7 @@ fragor::Limb::Limb(urdf::Model const &aModel,
     }
     // Some parts will be calculated more than once, but don't care, since there are only few of them.
     auto transform = createFixedTransforms(aModel, actualLinkId, aActualLocalRootId, aLinkId2parentLinkId, aId2name);
-    std::transform(meshes.begin(), meshes.end(), allTransformedMeshes.begin(), [&transform](HomVertex const& aVertex) -> HomVertex {
+    std::transform(meshes.begin(), meshes.end(), std::back_inserter(allTransformedMeshes), [&transform](HomVertex const& aVertex) -> HomVertex {
       return transform * aVertex;
     });
     for (auto &i : aLinkId2parentLinkId) {
@@ -66,7 +66,7 @@ fragor::Limb::Limb(urdf::Model const &aModel,
     }
   }
   mMesh.reserve(allTransformedMeshes.size());
-  std::copy(allTransformedMeshes.begin(), allTransformedMeshes.end(), mMesh.begin());
+  std::copy(allTransformedMeshes.begin(), allTransformedMeshes.end(), std::back_inserter(mMesh));
   Log::n() << Log::end;
 }
 
@@ -95,7 +95,7 @@ void fragor::Limb::readMesh(fragor::Transform const &aTransform,
 
 }
 
-void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<fragor::HomVertex> aMeshes, std::string const &aMeshRootDirectory) {
+void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<fragor::HomVertex> &aMeshes, std::string const &aMeshRootDirectory) {
   auto coll = aCollision.get();
   if(coll != nullptr) {
     auto &pose = coll->origin;
@@ -211,7 +211,7 @@ void fragor::Limb::transformMesh(std::vector<HomVertex> * const aResult) const {
   }
   aResult->reserve(mMesh.size());
   aResult->clear();
-  std::transform(mMesh.cbegin(), mMesh.cend(), aResult->begin(), [&transform](HomVertex const &aItem){ return transform * aItem; });
+  std::transform(mMesh.begin(), mMesh.end(), std::back_inserter(*aResult), [&transform](HomVertex const &aItem){ return transform * aItem; });
 }
 
 fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
@@ -278,6 +278,7 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
     id2limb.emplace(limbPointer->getLocalRootId(), std::move(limbUnique));
     if(actualLocalRootId == rootId) {
       mRoot = limbPointer;
+      limbPointer->addParent(nullptr);
     }
     else {
       auto possibleParentId = linkId2parentLinkId[actualLocalRootId];
@@ -286,7 +287,7 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
       }
       auto parentPointer = id2limb[possibleParentId].get();
       parentPointer->addChild(limbPointer);
-      limbPointer->addParent(parentPointer);  // TODO this should be nullptr for root
+      limbPointer->addParent(parentPointer);
       id2parentId.emplace(limbPointer->getLocalRootId(), parentPointer->getLocalRootId());
       Log::n() << "  -=-  " << parentPointer->getLocalRootId() << " ->" << limbPointer->getLocalRootId() << Log::end;
     }

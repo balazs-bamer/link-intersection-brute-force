@@ -43,9 +43,7 @@ fragor::Limb::Limb(urdf::Model const &aModel,
     auto actualLinkId = *(links2process.begin());
     links2process.pop_front();
     auto link = aModel.getLink(aId2name.at(actualLinkId));
-    auto coll = link->collision.get();
     std::deque<HomVertex> meshes;
-// perhaps needed, but not for this ROS2 implementation   collectMesh(link->collision, meshes);
     for(auto &i : link->collision_array) {
       collectMesh(i, meshes, aMeshRootDirectory);
     }
@@ -83,7 +81,7 @@ void fragor::Limb::readMesh(fragor::Transform const &aTransform,
                             std::deque<HomVertex> &aMeshes,
                             std::string const &aMeshRootDirectory) {
   stl_reader::StlMesh<float, int32_t> mesh(aMeshRootDirectory + aFilename);
-  for(int32_t indexTriangle = 0; indexTriangle < mesh.num_tris(); ++indexTriangle) {
+  for(int32_t indexTriangle = 0; indexTriangle < static_cast<int32_t>(mesh.num_tris()); ++indexTriangle) {
     for(int32_t indexCorner = 0; indexCorner < 3; ++indexCorner) {
       float const * const coords = mesh.tri_corner_coords(indexTriangle, indexCorner);
       Eigen::Vector4f in;
@@ -101,8 +99,13 @@ void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<f
   auto coll = aCollision.get();
   if(coll != nullptr) {
     auto &pose = coll->origin;
-    Translation translation { pose.position.x, pose.position.y, pose.position.z };
-    Quaternion rotation { pose.rotation.w, pose.rotation.x, pose.rotation.y, pose.rotation.z };
+    Translation translation { static_cast<float>(pose.position.x),
+                              static_cast<float>(pose.position.y),
+                              static_cast<float>(pose.position.z) };
+    Quaternion rotation { static_cast<float>(pose.rotation.w),
+                          static_cast<float>(pose.rotation.x),
+                          static_cast<float>(pose.rotation.y),
+                          static_cast<float>(pose.rotation.z) };
     Transform transform = homogenize(translation) * homogenize(rotation);
     auto geomSh{coll->geometry};
     auto mesh = dynamic_cast<urdf::Mesh *>(geomSh.get());
@@ -125,8 +128,13 @@ void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<f
 fragor::Transform fragor::Limb::createChildFixedTransform(urdf::JointSharedPtr aJoint) {
   fragor::Transform result;
   auto &pose = aJoint->parent_to_joint_origin_transform;
-  Translation translation{pose.position.x, pose.position.y, pose.position.z};
-  Quaternion rotation{pose.rotation.w, pose.rotation.x, pose.rotation.y, pose.rotation.z};
+  Translation translation{static_cast<float>(pose.position.x),
+                          static_cast<float>(pose.position.y),
+                          static_cast<float>(pose.position.z)};
+  Quaternion rotation{static_cast<float>(pose.rotation.w),
+                      static_cast<float>(pose.rotation.x),
+                      static_cast<float>(pose.rotation.y),
+                      static_cast<float>(pose.rotation.z)};
   if(rotation.vec().norm() < csEpsilon) {
     result.setIdentity();
   }
@@ -164,7 +172,7 @@ fragor::Limb::createChildTransform(urdf::Model const &aModel,
   ChildTransform result;
   auto movingJoint = aModel.getLink(aId2name.at(aChildId))->parent_joint;
   auto &axis = movingJoint->axis;
-  Eigen::Vector3f vector{axis.x, axis.y, axis.z};
+  Eigen::Vector3f vector{static_cast<float>(axis.x), static_cast<float>(axis.y), static_cast<float>(axis.z)};
   vector.normalize();
   if (movingJoint->type == urdf::Joint::PRISMATIC) {
     result.mPossibleUnitDisplacement = Translation{vector};
@@ -181,8 +189,29 @@ fragor::Limb::createChildTransform(urdf::Model const &aModel,
   result.mJointLimitHigh = movingJoint->limits->upper;
   result.mJointLimitEffort = movingJoint->limits->effort;
   result.mJointLimitVelocity = movingJoint->limits->velocity;
+  result.mActualJointPosition = (result.mJointLimitLow + result.mJointLimitHigh) / 2.0f;
   result.mValid = true;
   return result;
+}
+
+void fragor::Limb::transformMesh(std::vector<HomVertex> * const aResult) const {
+  Transform transform;
+  transform.setIdentity();
+  auto limb = this;
+  while(limb->mParent != nullptr) {
+    Translation translation{mOwnTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.x(),
+      mOwnTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.y(),
+      mOwnTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.z()};
+    Quaternion  quaternion{mOwnTransform.mActualJointPosition * mOwnTransform.mPossibleUnitRotation.w(),
+                           mOwnTransform.mPossibleUnitRotation.x(),
+                           mOwnTransform.mPossibleUnitRotation.y(),
+                           mOwnTransform.mPossibleUnitRotation.z()};
+    transform = mOwnTransform.mAllFixedTransforms * homogenize(quaternion) * homogenize(translation) * transform;
+    limb = limb->mParent;
+  }
+  aResult->reserve(mMesh.size());
+  aResult->clear();
+  std::transform(mMesh.cbegin(), mMesh.cend(), aResult->begin(), [&transform](HomVertex const &aItem){ return transform * aItem; });
 }
 
 fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
@@ -257,7 +286,7 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
       }
       auto parentPointer = id2limb[possibleParentId].get();
       parentPointer->addChild(limbPointer);
-      limbPointer->addParent(parentPointer);
+      limbPointer->addParent(parentPointer);  // TODO this should be nullptr for root
       id2parentId.emplace(limbPointer->getLocalRootId(), parentPointer->getLocalRootId());
       Log::n() << "  -=-  " << parentPointer->getLocalRootId() << " ->" << limbPointer->getLocalRootId() << Log::end;
     }
@@ -286,5 +315,31 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
   for(Id i = 0; i < seq; ++i) {
     Log::n() << i << "->" << mLimbs[i]->getLocalRootLink()->name << Log::end;
     Log::n() << i << "->" << mParentOfIndex[i] << Log::end;
+  }
+}
+
+float fragor::EigenMeshModel::getJointPosition(Id const aIndex) const {
+  if(aIndex >= getRootIndex()) {
+    throw std::invalid_argument("Root limb has no posiiton.");
+  }
+  else {
+    return mLimbs[aIndex]->getTransform().mActualJointPosition;
+  }
+}
+
+void fragor::EigenMeshModel::setJointPosition(Id const aIndex, float const aPosition) {
+  if(aIndex >= getRootIndex()) {
+    throw std::invalid_argument("Root limb has no position.");
+  }
+  else {
+    mLimbs[aIndex]->setJointPosition(aPosition);
+  }
+}
+
+void fragor::EigenMeshModel::transformLimbMesh(Id const aIndex, std::vector<HomVertex> * const aResult) {
+  if(aResult != nullptr) {
+    mLimbs[aIndex]->transformMesh(aResult);
+  }
+  else { // nothing to do
   }
 }

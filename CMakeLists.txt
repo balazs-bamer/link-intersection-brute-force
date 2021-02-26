@@ -29,6 +29,7 @@ find_package(urdf REQUIRED)
 
 add_executable(linkIntersectionBruteForce
         src/DumpModel.cpp
+        src/StlWriter.cpp
         src/EigenMeshModel.cpp
         src/main-node.cpp)
 ament_target_dependencies(linkIntersectionBruteForce rclcpp urdf)

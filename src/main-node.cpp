@@ -5,11 +5,13 @@
 #include "EigenMeshModel.h"
 #include "rclcpp/rclcpp.hpp"
 #include "urdf/model.h"
+#include "StlWriter.h"
 #include <string>
 #include <map>
 #include <unordered_set>
 #include <fstream>
 #include <regex>
+#include <fstream>
 
 class NodeLinkIntersectionBruteForce final : public rclcpp::Node {
 private:
@@ -17,6 +19,8 @@ private:
   static constexpr int                    csArgumentIndexForbiddenLinks = 2;
   static constexpr int                    csArgumentIndexMeshLocation   = 3;
   inline static constexpr char            csForbiddenRegex[] = "^[a-zA-Z_][a-zA-Z_/\\-0-9]*$";
+  inline static char                      csMeshNamePrefix[] = "transformedMesh";
+  inline static char                      csMeshNameSuffix[] = ".stl";
 
   urdf::Model                             mModel;
   std::map<std::string, std::string>      mParentLinkTree;
@@ -34,6 +38,18 @@ public:
 
   void dumpModelInfo() {
     ::dumpModelInfo(mModel, mParentLinkTree);
+  }
+
+  void dumpMesh() {
+    for(fragor::Id i = 0; i < mEigenModel->size(); ++i) {
+      std::string filename{csMeshNamePrefix};
+      filename += std::to_string(i);
+      filename += csMeshNameSuffix;
+      std::ofstream out{filename};
+      std::vector<fragor::HomVertex> mesh;
+      mEigenModel->transformLimbMesh(i, &mesh);
+      ::writeStlText(out, mEigenModel->getName(i), mesh);
+    }
   }
 
 private:
@@ -77,6 +93,7 @@ int main(int aArgc, char **aArgv) {
   }
   auto node = std::make_shared<NodeLinkIntersectionBruteForce>(aArgc, aArgv);
 //  node.get()->dumpModelInfo();
+  node.get()->dumpMesh();
   rclcpp::spin_some(node);
   Log::unregisterCurrentTask();
   Log::done();

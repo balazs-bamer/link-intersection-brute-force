@@ -30,6 +30,7 @@ private:
     Transform                           mAllFixedTransforms;
     Translation                         mPossibleUnitDisplacement; // Prism direction for prismatic joint.
     Quaternion                          mPossibleUnitRotation;     // Rotation axis with 1 radian unit for rotate joint.
+    float                               mActualJointPosition;      // Initially average of low and high limit.
     // Transforms come so from local parent to non-fixed joint child:
     // 1. All of fixed transform across the fixed joints.
     // 2. Constant displacement for this joint.
@@ -58,11 +59,13 @@ public:
        std::unordered_map<Id, std::string> const &aId2name,
        std::string const &aMeshRootDirectory);
   ~Limb() = default;
-  void addChild(Limb * const aChild);
-  void addParent(Limb const * const aParent) { mParent = aParent; }
-  Id   getLocalRootId() const                          { return mActualLocalRootId; }
-  ChildTransform const &getTransform() const           { return mOwnTransform; }
-  urdf::LinkConstSharedPtr getLocalRootLink() const    { return mLocalRootLink; }
+  void                     addChild(Limb * const aChild);
+  void                     addParent(Limb const * const aParent) { mParent = aParent; }
+  Id                       getLocalRootId() const                { return mActualLocalRootId; }
+  ChildTransform const&    getTransform() const                  { return mOwnTransform; }
+  urdf::LinkConstSharedPtr getLocalRootLink() const              { return mLocalRootLink; }
+  void                     setJointPosition(float const aPos)    { mOwnTransform.mActualJointPosition = aPos; }
+  void                     transformMesh(std::vector<HomVertex> * const aResult) const;
 
 private:
   void                  readMesh(Transform const &aTransform,
@@ -89,13 +92,27 @@ private:
 
   Limb const*                        mRoot;
   std::vector<Id>                    mParentOfIndex;  // For each index, its parent is in the array. For root, -1.
-  std::vector<std::unique_ptr<Limb>> mLimbs;
+  std::vector<std::unique_ptr<Limb>> mLimbs;          // The indices in these vectors are DIFFERENT then those used
+                                                      // in Limbs and during construction.
 
 public:
   EigenMeshModel(urdf::Model const &aModel,
                  std::map<std::string, std::string> const &aParentLinkTree,
                  std::unordered_set<std::string> const aForbiddenLinks,
                  std::string const &aMeshRootDirectory);
+
+  int32_t size() const                          { return mLimbs.size(); }
+  Id      getRootIndex() const                  { return mLimbs.size() - 1; }
+  Id      operator[](Id const aIndex) const     { return mParentOfIndex[aIndex]; }
+  float getJointPosition(Id const aIndex) const;
+  void  setJointPosition(Id const aIndex, float const aPosition);
+  float getLimitLow(Id const aIndex) const      { return mLimbs[aIndex]->getTransform().mJointLimitLow; }
+  float getLimitHigh(Id const aIndex) const     { return mLimbs[aIndex]->getTransform().mJointLimitHigh; }
+  float getLimitEffort(Id const aIndex) const   { return mLimbs[aIndex]->getTransform().mJointLimitEffort; }
+  float getLimitVelocity(Id const aIndex) const { return mLimbs[aIndex]->getTransform().mJointLimitVelocity; }
+  std::string getName(Id const aIndex) const    { return mLimbs[aIndex]->getLocalRootLink()->name; }
+
+  void  transformLimbMesh(Id const aIndex, std::vector<HomVertex> * const aResult);
 };
 
 }

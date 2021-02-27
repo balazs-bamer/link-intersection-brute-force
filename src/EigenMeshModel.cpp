@@ -81,27 +81,32 @@ void fragor::Limb::readMesh(fragor::Transform const &aTransform,
                             std::deque<HomVertex> &aMeshes,
                             std::string const &aMeshRootDirectory) {
   stl_reader::StlMesh<float, int32_t> mesh(aMeshRootDirectory + aFilename);
+  Eigen::Vector3f minCoord{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+  Eigen::Vector3f maxCoord{std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
   for(int32_t indexTriangle = 0; indexTriangle < static_cast<int32_t>(mesh.num_tris()); ++indexTriangle) {
     for(int32_t indexCorner = 0; indexCorner < 3; ++indexCorner) {
       float const * const coords = mesh.tri_corner_coords(indexTriangle, indexCorner);
       Eigen::Vector4f in;
       for(int32_t i = 0; i < 3; ++i) {
         in(i) = coords[i];
+        minCoord(i) = std::min(minCoord(i), coords[i]);
+        maxCoord(i) = std::max(maxCoord(i), coords[i]);
       }
       in(3) = csHomogeneousOne;
       aMeshes.push_back(aTransform * in);
     }
   }
-
+  Log::n() << "AABB min:" << minCoord(0) << minCoord(1) << minCoord(2) << Log::end;
+  Log::n() << "AABB max:" << maxCoord(0) << maxCoord(1) << maxCoord(2) << Log::end;
 }
 
 void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<fragor::HomVertex> &aMeshes, std::string const &aMeshRootDirectory) {
   auto coll = aCollision.get();
   if(coll != nullptr) {
     auto &pose = coll->origin;
-    Translation translation { static_cast<float>(pose.position.x),
-                              static_cast<float>(pose.position.y),
-                              static_cast<float>(pose.position.z) };
+    Translation translation { static_cast<float>(pose.position.x * csMmInMeter),
+                              static_cast<float>(pose.position.y * csMmInMeter),
+                              static_cast<float>(pose.position.z * csMmInMeter) };
     Quaternion rotation { static_cast<float>(pose.rotation.w),
                           static_cast<float>(pose.rotation.x),
                           static_cast<float>(pose.rotation.y),
@@ -127,20 +132,27 @@ void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<f
 
 fragor::Transform fragor::Limb::createChildFixedTransform(urdf::JointSharedPtr aJoint) {
   fragor::Transform result;
+  Log::n() << "joint fixed:" << aJoint->name << Log::end;
   auto &pose = aJoint->parent_to_joint_origin_transform;
-  Translation translation{static_cast<float>(pose.position.x),
-                          static_cast<float>(pose.position.y),
-                          static_cast<float>(pose.position.z)};
+  Log::n() << "pose position: " << pose.position.x << pose.position.y << pose.position.z << Log::end;
+  Log::n() << "pose rotation: " << pose.rotation.w << pose.rotation.x << pose.rotation.y << pose.rotation.z << Log::end;
+  Translation translation{static_cast<float>(pose.position.x * csMmInMeter),
+                          static_cast<float>(pose.position.y * csMmInMeter),
+                          static_cast<float>(pose.position.z * csMmInMeter)};
   Quaternion rotation{static_cast<float>(pose.rotation.w),
                       static_cast<float>(pose.rotation.x),
                       static_cast<float>(pose.rotation.y),
                       static_cast<float>(pose.rotation.z)};
   if(rotation.vec().norm() < csEpsilon) {
-    result.setIdentity();
+    result = homogenize(translation);
   }
   else {
     result = homogenize(translation) * homogenize(rotation);
   }
+  Log::n() << result(0,0) << result(0, 1) << result(0,2) << result(0,3) << Log::end;
+  Log::n() << result(1,0) << result(1, 1) << result(1,2) << result(1,3) << Log::end;
+  Log::n() << result(2,0) << result(2, 1) << result(2,2) << result(2,3) << Log::end;
+  Log::n() << result(3,0) << result(3, 1) << result(3,2) << result(3,3) << Log::end;
   return result;
 }
 
@@ -173,6 +185,7 @@ fragor::Limb::createChildTransform(urdf::Model const &aModel,
   auto movingJoint = aModel.getLink(aId2name.at(aChildId))->parent_joint;
   auto &axis = movingJoint->axis;
   Eigen::Vector3f vector{static_cast<float>(axis.x), static_cast<float>(axis.y), static_cast<float>(axis.z)};
+  Log::n() << "axis: " << axis.x << axis.y << axis.z << Log::end;
   vector.normalize();
   if (movingJoint->type == urdf::Joint::PRISMATIC) {
     result.mPossibleUnitDisplacement = Translation{vector};

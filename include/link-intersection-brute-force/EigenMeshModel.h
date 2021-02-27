@@ -37,6 +37,7 @@ private:
     // 3. Constant rotation for this joint.
     // 4. Actual rotation for rotate joint. | Actual joint displacement for prismatic joint. - These on urdf::Joint.axis
   };
+  static constexpr float                 csMmInMeter       = 1000.0f;
   static constexpr float                 csEpsilon         = 1e-6f;
   static constexpr float                 csHomogeneousOne  = 1.0f;
   inline static constexpr char           csStlNamePrefix[] = "package://";

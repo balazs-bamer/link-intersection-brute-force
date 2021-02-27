@@ -210,7 +210,6 @@ void fragor::Limb::transformMesh(std::vector<HomVertex> * const aResult) const {
     limb = limb->mParent;
   }
   aResult->reserve(mMesh.size());
-  aResult->clear();
   std::transform(mMesh.begin(), mMesh.end(), std::back_inserter(*aResult), [&transform](HomVertex const &aItem){ return transform * aItem; });
 }
 

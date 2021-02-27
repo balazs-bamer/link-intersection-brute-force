@@ -40,7 +40,7 @@ public:
     ::dumpModelInfo(mModel, mParentLinkTree);
   }
 
-  void dumpMesh() {
+  void dumpMeshDistinct() {
     for(fragor::Id i = 0; i < mEigenModel->size(); ++i) {
       std::string filename{csMeshNamePrefix};
       filename += std::to_string(i);
@@ -50,6 +50,17 @@ public:
       mEigenModel->transformLimbMesh(i, &mesh);
       ::writeStlBinary(out, mEigenModel->getName(i), mesh);
     }
+  }
+
+  void dumpMeshUnified() {
+    std::string filename{csMeshNamePrefix};
+    filename += csMeshNameSuffix;
+    std::ofstream out{filename, std::ios::binary};
+    std::vector<fragor::HomVertex> mesh;
+    for(fragor::Id i = 0; i < mEigenModel->size(); ++i) {
+      mEigenModel->transformLimbMesh(i, &mesh);
+    }
+    ::writeStlBinary(out, csMeshNamePrefix, mesh);
   }
 
 private:
@@ -93,7 +104,7 @@ int main(int aArgc, char **aArgv) {
   }
   auto node = std::make_shared<NodeLinkIntersectionBruteForce>(aArgc, aArgv);
 //  node.get()->dumpModelInfo();
-  node.get()->dumpMesh();
+  node.get()->dumpMeshUnified();
   rclcpp::spin_some(node);
   Log::unregisterCurrentTask();
   Log::done();

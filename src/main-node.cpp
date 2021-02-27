@@ -45,10 +45,10 @@ public:
       std::string filename{csMeshNamePrefix};
       filename += std::to_string(i);
       filename += csMeshNameSuffix;
-      std::ofstream out{filename};
+      std::ofstream out{filename, std::ios::binary};
       std::vector<fragor::HomVertex> mesh;
       mEigenModel->transformLimbMesh(i, &mesh);
-      ::writeStlText(out, mEigenModel->getName(i), mesh);
+      ::writeStlBinary(out, mEigenModel->getName(i), mesh);
     }
   }
 

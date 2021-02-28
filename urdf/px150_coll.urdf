@@ -83,14 +83,14 @@
   </transmission>
   <link name="px150/upper_arm_link">
     <visual>
-      <origin rpy="0 0 1.5707963267948966" xyz="0 0 0"/>
+      <origin rpy="0 3.141592653589793 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
         <mesh filename="package://meshes/px150_meshes/px150_3_upper_arm_coll.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="interbotix_black"/>
     </visual>
     <collision>
-      <origin rpy="0 0 1.5707963267948966" xyz="0 0 0"/>
+      <origin rpy="0 3.141592653589793 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
         <mesh filename="package://meshes/px150_meshes/px150_3_upper_arm_coll.stl" scale="0.001 0.001 0.001"/>
       </geometry>

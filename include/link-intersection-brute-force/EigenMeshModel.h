@@ -105,6 +105,7 @@ public:
   int32_t size() const                          { return mLimbs.size(); }
   Id      getRootIndex() const                  { return mLimbs.size() - 1; }
   Id      operator[](Id const aIndex) const     { return mParentOfIndex[aIndex]; }
+  // These apply to the joint directly holding the link specified by aIndex.
   float getJointPosition(Id const aIndex) const;
   void  setJointPosition(Id const aIndex, float const aPosition);
   float getLimitLow(Id const aIndex) const      { return mLimbs[aIndex]->getTransform().mJointLimitLow; }

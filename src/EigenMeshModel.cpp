@@ -89,14 +89,14 @@ void fragor::Limb::readMesh(fragor::Transform const &aTransform,
       float const * const coords = mesh.tri_corner_coords(indexTriangle, indexCorner);
       Eigen::Vector4f in;
       in(0) = coords[0] * aScale.x;
-      minCoord(0) = std::min(minCoord(0), coords[0]);
-      maxCoord(0) = std::max(maxCoord(0), coords[0]);
+      minCoord(0) = std::min(minCoord(0), in[0]);
+      maxCoord(0) = std::max(maxCoord(0), in[0]);
       in(1) = coords[1] * aScale.y;
-      minCoord(1) = std::min(minCoord(1), coords[1]);
-      maxCoord(1) = std::max(maxCoord(1), coords[1]);
+      minCoord(1) = std::min(minCoord(1), in[1]);
+      maxCoord(1) = std::max(maxCoord(1), in[1]);
       in(2) = coords[2] * aScale.z;
-      minCoord(2) = std::min(minCoord(2), coords[2]);
-      maxCoord(2) = std::max(maxCoord(2), coords[2]);
+      minCoord(2) = std::min(minCoord(2), in[2]);
+      maxCoord(2) = std::max(maxCoord(2), in[2]);
       in(3) = csHomogeneousOne;
       aMeshes.push_back(aTransform * in);
     }

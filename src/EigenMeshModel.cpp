@@ -79,7 +79,8 @@ void fragor::Limb::addChild(Limb * const aChild) {
 void fragor::Limb::readMesh(fragor::Transform const &aTransform,
                             std::string const aFilename,
                             std::deque<HomVertex> &aMeshes,
-                            std::string const &aMeshRootDirectory) {
+                            std::string const &aMeshRootDirectory,
+                            urdf::Vector3 const &aScale) {
   stl_reader::StlMesh<float, int32_t> mesh(aMeshRootDirectory + aFilename);
   Eigen::Vector3f minCoord{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
   Eigen::Vector3f maxCoord{std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
@@ -87,11 +88,15 @@ void fragor::Limb::readMesh(fragor::Transform const &aTransform,
     for(int32_t indexCorner = 0; indexCorner < 3; ++indexCorner) {
       float const * const coords = mesh.tri_corner_coords(indexTriangle, indexCorner);
       Eigen::Vector4f in;
-      for(int32_t i = 0; i < 3; ++i) {
-        in(i) = coords[i];
-        minCoord(i) = std::min(minCoord(i), coords[i]);
-        maxCoord(i) = std::max(maxCoord(i), coords[i]);
-      }
+      in(0) = coords[0] * aScale.x;
+      minCoord(0) = std::min(minCoord(0), coords[0]);
+      maxCoord(0) = std::max(maxCoord(0), coords[0]);
+      in(1) = coords[1] * aScale.y;
+      minCoord(1) = std::min(minCoord(1), coords[1]);
+      maxCoord(1) = std::max(maxCoord(1), coords[1]);
+      in(2) = coords[2] * aScale.z;
+      minCoord(2) = std::min(minCoord(2), coords[2]);
+      maxCoord(2) = std::max(maxCoord(2), coords[2]);
       in(3) = csHomogeneousOne;
       aMeshes.push_back(aTransform * in);
     }
@@ -104,9 +109,9 @@ void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<f
   auto coll = aCollision.get();
   if(coll != nullptr) {
     auto &pose = coll->origin;
-    Translation translation { static_cast<float>(pose.position.x * csMmInMeter),
-                              static_cast<float>(pose.position.y * csMmInMeter),
-                              static_cast<float>(pose.position.z * csMmInMeter) };
+    Translation translation { static_cast<float>(pose.position.x),
+                              static_cast<float>(pose.position.y),
+                              static_cast<float>(pose.position.z) };
     Quaternion rotation { static_cast<float>(pose.rotation.w),
                           static_cast<float>(pose.rotation.x),
                           static_cast<float>(pose.rotation.y),
@@ -120,7 +125,7 @@ void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<f
         filename.erase(0u, std::strlen(csStlNamePrefix));
       } else { // nothing to do
       }
-      readMesh(transform, filename, aMeshes, aMeshRootDirectory);
+      readMesh(transform, filename, aMeshes, aMeshRootDirectory, mesh->scale);
       Log::n() << filename << aMeshes.size() << Log::end;
     } else {
       Log::n() << "NONE" << Log::end;
@@ -136,9 +141,9 @@ fragor::Transform fragor::Limb::createChildFixedTransform(urdf::JointSharedPtr a
   auto &pose = aJoint->parent_to_joint_origin_transform;
   Log::n() << "pose position: " << pose.position.x << pose.position.y << pose.position.z << Log::end;
   Log::n() << "pose rotation: " << pose.rotation.w << pose.rotation.x << pose.rotation.y << pose.rotation.z << Log::end;
-  Translation translation{static_cast<float>(pose.position.x * csMmInMeter),
-                          static_cast<float>(pose.position.y * csMmInMeter),
-                          static_cast<float>(pose.position.z * csMmInMeter)};
+  Translation translation{static_cast<float>(pose.position.x),
+                          static_cast<float>(pose.position.y),
+                          static_cast<float>(pose.position.z)};
   Quaternion rotation{static_cast<float>(pose.rotation.w),
                       static_cast<float>(pose.rotation.x),
                       static_cast<float>(pose.rotation.y),

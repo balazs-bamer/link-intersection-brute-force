@@ -74,7 +74,6 @@ fragor::Limb::Limb(urdf::Model const &aModel,
   }
   mMesh.reserve(allTransformedMeshes.size());
   std::copy(allTransformedMeshes.begin(), allTransformedMeshes.end(), std::back_inserter(mMesh));
-  Log::n() << Log::end;
 }
 
 void fragor::Limb::addChild(Limb * const aChild) {
@@ -108,8 +107,6 @@ void fragor::Limb::readMesh(fragor::Transform const &aTransform,
       aMeshes.push_back(aTransform * in);
     }
   }
-  Log::n() << "AABB min:" << minCoord(0) << minCoord(1) << minCoord(2) << Log::end;
-  Log::n() << "AABB max:" << maxCoord(0) << maxCoord(1) << maxCoord(2) << Log::end;
 }
 
 void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<fragor::HomVertex> &aMeshes, std::string const &aMeshRootDirectory) {
@@ -142,10 +139,7 @@ void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<f
 
 fragor::Transform fragor::Limb::createChildFixedTransform(urdf::JointSharedPtr aJoint) {
   fragor::Transform result;
-  Log::n() << "joint fixed:" << aJoint->name << Log::end;
   auto &pose = aJoint->parent_to_joint_origin_transform;
-  Log::n() << "pose position: " << pose.position.x << pose.position.y << pose.position.z << Log::end;
-  Log::n() << "pose rotation: " << pose.rotation.w << pose.rotation.x << pose.rotation.y << pose.rotation.z << Log::end;
   Translation translation{static_cast<float>(pose.position.x),
                           static_cast<float>(pose.position.y),
                           static_cast<float>(pose.position.z)};
@@ -173,9 +167,7 @@ fragor::Transform fragor::Limb::createFixedTransforms(urdf::Model const &aModel,
   while(iterateLinkId != aActualLocalRootId) {
     auto child = aModel.getLink(aId2name.at(iterateLinkId));
     auto fixedJoint = child->parent_joint;
-    Log::i() << "createFixedTransforms joint" << fixedJoint->name << Log::end;
-    result = createChildFixedTransform(fixedJoint) * result;         // TODO consider if good
-    Log::n() << "=>" << aId2name.at(iterateLinkId) << Log::end;
+    result = createChildFixedTransform(fixedJoint) * result;
     iterateLinkId = aLinkId2parentLinkId.at(iterateLinkId);
   }
   return result;
@@ -191,7 +183,6 @@ fragor::Limb::createChildTransform(urdf::Model const &aModel,
   auto movingJoint = aModel.getLink(aId2name.at(aChildId))->parent_joint;
   auto &axis = movingJoint->axis;
   Vertex vector{static_cast<float>(axis.x), static_cast<float>(axis.y), static_cast<float>(axis.z)};
-  Log::n() << "axis: " << axis.x << axis.y << axis.z << Log::end;
   vector.normalize();
   if (movingJoint->type == urdf::Joint::PRISMATIC) {
     result.mPossibleUnitDisplacement = Translation{vector};
@@ -211,8 +202,6 @@ fragor::Limb::createChildTransform(urdf::Model const &aModel,
   result.mJointLimitEffort = movingJoint->limits->effort;
   result.mJointLimitVelocity = movingJoint->limits->velocity;
   result.mActualJointPosition = (result.mJointLimitLow + result.mJointLimitHigh) / 2.0f;
-  Log::n() << "createChildTransform" << movingJoint->name << "low" << result.mJointLimitLow << Log::end;
-  Log::n() << "createChildTransform" << movingJoint->name << "high" << result.mJointLimitHigh << Log::end;
   result.mValid = true;
   return result;
 }
@@ -223,9 +212,9 @@ void fragor::Limb::transformMesh(std::vector<HomVertex> * const aResult) const {
   auto limb = this;
   while(limb->mParent != nullptr) {
     auto &ownTransform = limb->mOwnTransform;
-    Translation translation{ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.x(),
-      ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.y(),
-      ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.z()};
+    Translation translation{ownTransform.mActualJointPosition * ownTransform.mPossibleUnitDisplacement.x(),
+      ownTransform.mActualJointPosition * ownTransform.mPossibleUnitDisplacement.y(),
+      ownTransform.mActualJointPosition * ownTransform.mPossibleUnitDisplacement.z()};
     auto cosActualAngle = std::cos(ownTransform.mPossibleRotationFactor * ownTransform.mActualJointPosition);
     auto sinActualAngle = std::sin(ownTransform.mPossibleRotationFactor * ownTransform.mActualJointPosition);
     Quaternion  quaternion{cosActualAngle,
@@ -314,14 +303,7 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
       parentPointer->addChild(limbPointer);
       limbPointer->addParent(parentPointer);
       id2parentId.emplace(limbPointer->getLocalRootId(), parentPointer->getLocalRootId());
-      Log::n() << "  -=-  " << parentPointer->getLocalRootId() << " ->" << limbPointer->getLocalRootId() << Log::end;
     }
-  }
-  // TODO remove log
-  Log::n() << "  -id2limb-  " << id2limb.size() << Log::end;
-  Log::n() << "  -id2parentId-  " << id2parentId.size() << Log::end;
-  for(auto &i : id2limb) {
-    Log::n() << i.second->getLocalRootLink()->name << Log::end;
   }
   mParentOfIndex.reserve(id2limb.size());
   mLimbs.reserve(id2limb.size());
@@ -335,12 +317,6 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
   }
   for(auto &i: id2parentId) {
     mParentOfIndex[id2seq[i.first]] = id2seq[i.second];
-  }
-  // TODO remove log
-  Log::n() << "  =mLimbs=  " << mLimbs.size() << Log::end;
-  for(Id i = 0; i < seq; ++i) {
-    Log::n() << i << "->" << mLimbs[i]->getLocalRootLink()->name << Log::end;
-    Log::n() << i << "->" << mParentOfIndex[i] << Log::end;
   }
 }
 

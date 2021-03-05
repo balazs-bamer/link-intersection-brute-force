@@ -53,13 +53,13 @@ public:
   }
 
   void dumpMeshUnified() {
-    mEigenModel->setJointPosition(0, 0.0f);
-    mEigenModel->setJointPosition(1, 0.0f);
-    mEigenModel->setJointPosition(2, 0.0f);
-    mEigenModel->setJointPosition(3, 0.0f);
-    mEigenModel->setJointPosition(4, 0.0f);
-//    mEigenModel->setJointPosition(5, -0.02f);
-  //  mEigenModel->setJointPosition(6, 0.02f);
+    mEigenModel->setJointPosition(0, -0.02f); // right finger
+    mEigenModel->setJointPosition(1, 0.03f);  // left finger
+    mEigenModel->setJointPosition(2, 1.3f);   // wrist roll (gripper)
+    mEigenModel->setJointPosition(3, 0.3f);   // wrist pitch (wrist)
+    mEigenModel->setJointPosition(4, 0.7f);   // elbow
+    mEigenModel->setJointPosition(5, -1.0f);  // shoulder
+    mEigenModel->setJointPosition(6, 0.4f);   // waist
     std::string filename{csMeshNamePrefix};
     filename += csMeshNameSuffix;
     std::ofstream out{filename, std::ios::binary};

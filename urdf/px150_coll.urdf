@@ -141,7 +141,7 @@
   <joint name="wrist_angle" type="revolute">
     <axis xyz="0 1 0"/>
     <limit effort="5" lower="-1.7453292519943295" upper="2.1467549799530254" velocity="3.141592653589793"/>
-    <origin rpy="0 0 0" xyz="0.15 0 0"/>
+    <origin rpy="0 0 3.141592653589793" xyz="0.15 0 0"/>
     <parent link="px150/forearm_link"/>
     <child link="px150/wrist_link"/>
     <dynamics friction="0.1"/>

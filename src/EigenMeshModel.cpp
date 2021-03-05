@@ -39,8 +39,6 @@ fragor::Limb::Limb(urdf::Model const &aModel,
                                                : mActualLocalRootId(aActualLocalRootId)
                                                , mLocalRootLink(aModel.getLink(aId2name.at(aActualLocalRootId)))
                                                , mJoint(mLocalRootLink->parent_joint) {
-  for(auto &i : aCurrentLimbIds) { Log::n() << '-' << aId2name.at(i) << Log::end; } // TODO remove
-
   std::deque<HomVertex> allTransformedMeshes;
   auto remainingLinks = aCurrentLimbIds;
   std::list<Id> links2process;
@@ -68,7 +66,6 @@ fragor::Limb::Limb(urdf::Model const &aModel,
           links2process.push_back(i.first);
         }
         else if(!aCurrentLimbIds.contains(i.first)) {  // Found a child with non-fixed joint.
-          Log::n() << "createChildTransform comes" << Log::end;
           mChildTransforms.emplace(std::make_pair(i.first, createChildTransform(aModel, i.first, aActualLocalRootId, aLinkId2parentLinkId, aId2name)));
         }
       } else { // nothing to do
@@ -130,16 +127,13 @@ void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<f
     auto geomSh{coll->geometry};
     auto mesh = dynamic_cast<urdf::Mesh *>(geomSh.get());
     if (mesh != nullptr) {
-      printLog(transform, "collectMesh");
       std::string filename = mesh->filename;
       if (filename.starts_with(csStlNamePrefix)) {
         filename.erase(0u, std::strlen(csStlNamePrefix));
       } else { // nothing to do
       }
       readMesh(transform, filename, aMeshes, aMeshRootDirectory, mesh->scale);
-      Log::n() << filename << aMeshes.size() << Log::end;
     } else {
-      Log::n() << "NONE" << Log::end;
     }
   }
   else { // TODO find out how to carry on with transforms if this is missing.
@@ -165,7 +159,6 @@ fragor::Transform fragor::Limb::createChildFixedTransform(urdf::JointSharedPtr a
   else {
     result = homogenize(translation) * homogenize(rotation);
   }
-  printLog(result, "createChildFixedTransform");
   return result;
 }
 
@@ -177,7 +170,6 @@ fragor::Transform fragor::Limb::createFixedTransforms(urdf::Model const &aModel,
   Transform result;
   result.setIdentity();
   auto iterateLinkId = aLeafId;
-  Log::n() << "createFixedTransforms while" << (iterateLinkId != aActualLocalRootId) << Log::end;
   while(iterateLinkId != aActualLocalRootId) {
     auto child = aModel.getLink(aId2name.at(iterateLinkId));
     auto fixedJoint = child->parent_joint;
@@ -186,8 +178,6 @@ fragor::Transform fragor::Limb::createFixedTransforms(urdf::Model const &aModel,
     Log::n() << "=>" << aId2name.at(iterateLinkId) << Log::end;
     iterateLinkId = aLinkId2parentLinkId.at(iterateLinkId);
   }
-  printLog(result, "createFixedTransforms");
-  Log::n() << "=." << Log::end;
   return result;
 }
 
@@ -214,7 +204,6 @@ fragor::Limb::createChildTransform(urdf::Model const &aModel,
   result.mAllFixedTransforms =
     createFixedTransforms(aModel, aLinkId2parentLinkId.at(aChildId), aActualLocalRootId, aLinkId2parentLinkId, aId2name)
     * createChildFixedTransform(movingJoint);
-  printLog(result.mAllFixedTransforms, "mAllFixedTransforms");
   result.mJointLimitLow = movingJoint->limits->lower;
   result.mJointLimitHigh = movingJoint->limits->upper;
   result.mJointLimitEffort = movingJoint->limits->effort;
@@ -230,10 +219,10 @@ void fragor::Limb::transformMesh(std::vector<HomVertex> * const aResult) const {
   Transform transform;
   transform.setIdentity();
   auto limb = this;
-  Log::n() << "transformMesh while" << (limb->mParent != nullptr) << Log::end;
+  Log::n() << "limb:" << mLocalRootLink->name << Log::end;
   while(limb->mParent != nullptr) {
     auto &ownTransform = limb->mOwnTransform;
-    Log::n() << "transformMesh actual" << ownTransform.mActualJointPosition << Log::end;
+    Log::n() << "transformMesh actual" << ownTransform.mActualJointPosition << "possUnitRot: " << mOwnTransform.mPossibleUnitRotation.w() << Log::end;
     Translation translation{ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.x(),
       ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.y(),
       ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.z()};
@@ -241,11 +230,9 @@ void fragor::Limb::transformMesh(std::vector<HomVertex> * const aResult) const {
                            ownTransform.mPossibleUnitRotation.x(),
                            ownTransform.mPossibleUnitRotation.y(),
                            ownTransform.mPossibleUnitRotation.z()};
-    printLog(homogenize(quaternion) * homogenize(translation), "transformMesh actual");
     transform = ownTransform.mAllFixedTransforms * homogenize(quaternion) * homogenize(translation) * transform;
     limb = limb->mParent;
   }
-  printLog(transform, "transformMesh");
   aResult->reserve(mMesh.size());
   std::transform(mMesh.begin(), mMesh.end(), std::back_inserter(*aResult), [&transform](HomVertex const &aItem){ return transform * aItem; });
 }

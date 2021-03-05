@@ -89,8 +89,8 @@ void fragor::Limb::readMesh(fragor::Transform const &aTransform,
                             std::string const &aMeshRootDirectory,
                             urdf::Vector3 const &aScale) {
   stl_reader::StlMesh<float, int32_t> mesh(aMeshRootDirectory + aFilename);
-  Eigen::Vector3f minCoord{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-  Eigen::Vector3f maxCoord{std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+  Vertex minCoord{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+  Vertex maxCoord{std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
   for(int32_t indexTriangle = 0; indexTriangle < static_cast<int32_t>(mesh.num_tris()); ++indexTriangle) {
     for(int32_t indexCorner = 0; indexCorner < 3; ++indexCorner) {
       float const * const coords = mesh.tri_corner_coords(indexTriangle, indexCorner);
@@ -190,15 +190,17 @@ fragor::Limb::createChildTransform(urdf::Model const &aModel,
   ChildTransform result;
   auto movingJoint = aModel.getLink(aId2name.at(aChildId))->parent_joint;
   auto &axis = movingJoint->axis;
-  Eigen::Vector3f vector{static_cast<float>(axis.x), static_cast<float>(axis.y), static_cast<float>(axis.z)};
+  Vertex vector{static_cast<float>(axis.x), static_cast<float>(axis.y), static_cast<float>(axis.z)};
   Log::n() << "axis: " << axis.x << axis.y << axis.z << Log::end;
   vector.normalize();
   if (movingJoint->type == urdf::Joint::PRISMATIC) {
     result.mPossibleUnitDisplacement = Translation{vector};
-    result.mPossibleUnitRotation = Quaternion{0.0f, 1.0f, 0.0f, 0.0f};
+    result.mPossibleRotationAxis = Vertex{1.0f, 0.0f, 0.0f};
+    result.mPossibleRotationFactor = 0.0f;
   } else if (movingJoint->type == urdf::Joint::REVOLUTE) {
     result.mPossibleUnitDisplacement = Translation{0.0f, 0.0f, 0.0f};
-    result.mPossibleUnitRotation = Quaternion{1.0f, vector.x(), vector.y(), vector.z()};
+    result.mPossibleRotationAxis = vector;
+    result.mPossibleRotationFactor = 1.0f;
   } else { // nothing to do
   }
   result.mAllFixedTransforms =
@@ -219,17 +221,17 @@ void fragor::Limb::transformMesh(std::vector<HomVertex> * const aResult) const {
   Transform transform;
   transform.setIdentity();
   auto limb = this;
-  Log::n() << "limb:" << mLocalRootLink->name << Log::end;
   while(limb->mParent != nullptr) {
     auto &ownTransform = limb->mOwnTransform;
-    Log::n() << "transformMesh actual" << ownTransform.mActualJointPosition << "possUnitRot: " << mOwnTransform.mPossibleUnitRotation.w() << Log::end;
     Translation translation{ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.x(),
       ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.y(),
       ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitDisplacement.z()};
-    Quaternion  quaternion{ownTransform.mActualJointPosition * mOwnTransform.mPossibleUnitRotation.w(),
-                           ownTransform.mPossibleUnitRotation.x(),
-                           ownTransform.mPossibleUnitRotation.y(),
-                           ownTransform.mPossibleUnitRotation.z()};
+    auto cosActualAngle = std::cos(ownTransform.mPossibleRotationFactor * ownTransform.mActualJointPosition);
+    auto sinActualAngle = std::sin(ownTransform.mPossibleRotationFactor * ownTransform.mActualJointPosition);
+    Quaternion  quaternion{cosActualAngle,
+                           ownTransform.mPossibleRotationAxis.x() * sinActualAngle,
+                           ownTransform.mPossibleRotationAxis.y() * sinActualAngle,
+                           ownTransform.mPossibleRotationAxis.z() * sinActualAngle};
     transform = ownTransform.mAllFixedTransforms * homogenize(quaternion) * homogenize(translation) * transform;
     limb = limb->mParent;
   }

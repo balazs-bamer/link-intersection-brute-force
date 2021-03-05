@@ -14,10 +14,11 @@
 namespace fragor {
 
 using Id = int32_t;
-using Transform   = Eigen::Transform<float, 3, Eigen::Affine>; // TODO check if bottom row remains 0 0 0 1
+using Transform   = Eigen::Transform<float, 3, Eigen::Affine>;
 using Translation = Eigen::Translation<float, 3>;
 using Quaternion  = Eigen::Quaternion<float>;
 using HomVertex   = Eigen::Vector4f;                           // Last coordinate is 1.
+using Vertex      = Eigen::Vector3f;
 
 class Limb {
 private:
@@ -29,7 +30,8 @@ private:
     float                               mJointLimitVelocity;
     Transform                           mAllFixedTransforms;
     Translation                         mPossibleUnitDisplacement; // Prism direction for prismatic joint.
-    Quaternion                          mPossibleUnitRotation;     // Rotation axis with 1 radian unit for rotate joint.
+    Vertex                              mPossibleRotationAxis;     // Rotation axis with.
+    float                               mPossibleRotationFactor;   // Factor for rotation angle, 1 if used, 0 if no rotation.
     float                               mActualJointPosition;      // Initially average of low and high limit.
     // Transforms come so from local parent to non-fixed joint child:
     // 1. All of fixed transform across the fixed joints.

@@ -55,7 +55,7 @@ public:
   void dumpMeshUnified() {
     mEigenModel->setJointPosition(0, -0.5f);
     mEigenModel->setJointPosition(1, 0.5f);
-    mEigenModel->setJointPosition(2, -1.2f);
+    mEigenModel->setJointPosition(2, -1.0f);
     std::string filename{csMeshNamePrefix};
     filename += csMeshNameSuffix;
     std::ofstream out{filename, std::ios::binary};

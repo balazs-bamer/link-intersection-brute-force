@@ -200,7 +200,7 @@ fragor::Limb::createChildTransform(urdf::Model const &aModel,
   } else if (movingJoint->type == urdf::Joint::REVOLUTE) {
     result.mPossibleUnitDisplacement = Translation{0.0f, 0.0f, 0.0f};
     result.mPossibleRotationAxis = vector;
-    result.mPossibleRotationFactor = 1.0f;
+    result.mPossibleRotationFactor = 0.5f;
   } else { // nothing to do
   }
   result.mAllFixedTransforms =

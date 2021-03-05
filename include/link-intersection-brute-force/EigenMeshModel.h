@@ -31,7 +31,7 @@ private:
     Transform                           mAllFixedTransforms;
     Translation                         mPossibleUnitDisplacement; // Prism direction for prismatic joint.
     Vertex                              mPossibleRotationAxis;     // Rotation axis with.
-    float                               mPossibleRotationFactor;   // Factor for rotation angle, 1 if used, 0 if no rotation.
+    float                               mPossibleRotationFactor;   // Factor for rotation angle, 0.5 if used, 0 if no rotation.
     float                               mActualJointPosition;      // Initially average of low and high limit.
     // Transforms come so from local parent to non-fixed joint child:
     // 1. All of fixed transform across the fixed joints.

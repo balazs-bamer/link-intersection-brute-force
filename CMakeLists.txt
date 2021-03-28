@@ -23,9 +23,25 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(urdf REQUIRED)
+find_package(gazebo_ros REQUIRED)
+find_package(gazebo_dev REQUIRED)
+find_package(pluginlib REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+
+include_directories(
+        ${gazebo_INCLUDE_DIRS}
+        ${gazebo_ros_INCLUDE_DIRS}
+        include/link-intersection-brute-force
+        3rdparty/stl_reader
+        3rdparty/cpp-logger
+        3rdparty/cpp-memory-manager
+        /usr/include/eigen3
+)
+
+add_library(gazebo_plugin
+        src/gazebo-plugin.cpp)
 
 add_executable(linkIntersectionBruteForce
         src/DumpModel.cpp
@@ -33,14 +49,12 @@ add_executable(linkIntersectionBruteForce
         src/EigenMeshModel.cpp
         src/main-node.cpp)
 ament_target_dependencies(linkIntersectionBruteForce rclcpp urdf)
+target_link_libraries(linkIntersectionBruteForce gazebo_plugin)    # hack
 target_include_directories(linkIntersectionBruteForce PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-        3rdparty/stl_reader
-        3rdparty/cpp-logger
-        3rdparty/cpp-memory-manager
-        include/link-intersection-brute-force
-        /usr/include/eigen3)
+        )
+#link_directories(${GAZEBO_LIBRARY_DIRS})
 
 install(TARGETS linkIntersectionBruteForce
   DESTINATION lib/${PROJECT_NAME})

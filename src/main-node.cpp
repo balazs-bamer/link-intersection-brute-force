@@ -11,7 +11,6 @@
 #include <unordered_set>
 #include <fstream>
 #include <regex>
-#include <fstream>
 
 class NodeLinkIntersectionBruteForce final : public rclcpp::Node {
 private:
@@ -110,6 +109,15 @@ int main(int aArgc, char **aArgv) {
     Log::n() << i << aArgv[i] << Log::end;
   }
   auto node = std::make_shared<NodeLinkIntersectionBruteForce>(aArgc, aArgv);
+  auto options = node->get_node_options();
+  auto args = options.arguments();
+  for(auto &i : args) {
+    Log::n() << "arg: " << i << Log::end;
+  }
+  auto const overrides = options.parameter_overrides();
+  for(auto &i : overrides) {
+    Log::n() << "paraOver: " << i.get_type_name() << i.get_name() << i.as_string() << Log::end;
+  }
 //  node.get()->dumpModelInfo();
   node.get()->dumpMeshUnified();
   rclcpp::spin_some(node);

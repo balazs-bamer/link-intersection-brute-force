@@ -21,7 +21,7 @@ fragor::Transform homogenize(fragor::Quaternion const &aQuaternion) {
   return result;
 }
 
-void printLog(Transform const &aTransform, std::string const aName) {
+void printLog(Transform const &aTransform, std::string const &aName) {
   Log::n() << aName << aTransform(0,0) << aTransform(0, 1) << aTransform(0,2) << aTransform(0,3) << Log::end;
   Log::n() << aName << aTransform(1,0) << aTransform(1, 1) << aTransform(1,2) << aTransform(1,3) << Log::end;
   Log::n() << aName << aTransform(2,0) << aTransform(2, 1) << aTransform(2,2) << aTransform(2,3) << Log::end;
@@ -39,7 +39,7 @@ fragor::Limb::Limb(urdf::Model const &aModel,
                                                : mActualLocalRootId(aActualLocalRootId)
                                                , mLocalRootLink(aModel.getLink(aId2name.at(aActualLocalRootId)))
                                                , mJoint(mLocalRootLink->parent_joint) {
-  std::deque<HomVertex> allTransformedMeshes;
+  std::deque<Vertex> allTransformedMeshes;
   auto remainingLinks = aCurrentLimbIds;
   std::list<Id> links2process;
   remainingLinks.erase(aActualLocalRootId);
@@ -48,14 +48,14 @@ fragor::Limb::Limb(urdf::Model const &aModel,
     auto actualLinkId = *(links2process.begin());
     links2process.pop_front();
     auto link = aModel.getLink(aId2name.at(actualLinkId));
-    std::deque<HomVertex> meshes;
+    std::deque<Vertex> meshes;
     for(auto &i : link->collision_array) {
       collectMesh(i, meshes, aMeshRootDirectory);
     }
     // Meshes now contains the actualLinkId's all meshes scaled and transformed with their own pose.
     // Some parts will be calculated more than once, but don't care, since there are only few of them.
     auto transform = createFixedTransforms(aModel, actualLinkId, aActualLocalRootId, aLinkId2parentLinkId, aId2name);
-    std::transform(meshes.begin(), meshes.end(), std::back_inserter(allTransformedMeshes), [&transform](HomVertex const& aVertex) -> HomVertex {
+    std::transform(meshes.begin(), meshes.end(), std::back_inserter(allTransformedMeshes), [&transform](Vertex const& aVertex) -> Vertex {
       return transform * aVertex;
     });
     // allTransformedMeshes now gathers the meshes transformed into the local root link's space.
@@ -84,7 +84,7 @@ void fragor::Limb::addChild(Limb * const aChild) {
 
 void fragor::Limb::readMesh(fragor::Transform const &aTransform,
                             std::string const aFilename,
-                            std::deque<HomVertex> &aMeshes,
+                            std::deque<Vertex> &aMeshes,
                             std::string const &aMeshRootDirectory,
                             urdf::Vector3 const &aScale) {
   stl_reader::StlMesh<float, int32_t> mesh(aMeshRootDirectory + aFilename);
@@ -93,7 +93,7 @@ void fragor::Limb::readMesh(fragor::Transform const &aTransform,
   for(int32_t indexTriangle = 0; indexTriangle < static_cast<int32_t>(mesh.num_tris()); ++indexTriangle) {
     for(int32_t indexCorner = 0; indexCorner < 3; ++indexCorner) {
       float const * const coords = mesh.tri_corner_coords(indexTriangle, indexCorner);
-      Eigen::Vector4f in;
+      Vertex in;
       in(0) = coords[0] * aScale.x;
       minCoord(0) = std::min(minCoord(0), in[0]);
       maxCoord(0) = std::max(maxCoord(0), in[0]);
@@ -103,13 +103,12 @@ void fragor::Limb::readMesh(fragor::Transform const &aTransform,
       in(2) = coords[2] * aScale.z;
       minCoord(2) = std::min(minCoord(2), in[2]);
       maxCoord(2) = std::max(maxCoord(2), in[2]);
-      in(3) = csHomogeneousOne;
       aMeshes.push_back(aTransform * in);
     }
   }
 }
 
-void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<fragor::HomVertex> &aMeshes, std::string const &aMeshRootDirectory) {
+void fragor::Limb::collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<fragor::Vertex> &aMeshes, std::string const &aMeshRootDirectory) {
   auto coll = aCollision.get();
   if(coll != nullptr) {
     auto &pose = coll->origin;
@@ -206,7 +205,7 @@ fragor::Limb::createChildTransform(urdf::Model const &aModel,
   return result;
 }
 
-void fragor::Limb::transformMesh(std::vector<HomVertex> * const aResult) const {
+void fragor::Limb::transformMesh(std::vector<Vertex> * const aResult) const {
   Transform transform;
   transform.setIdentity();
   auto limb = this;
@@ -225,7 +224,7 @@ void fragor::Limb::transformMesh(std::vector<HomVertex> * const aResult) const {
     limb = limb->mParent;
   }
   aResult->reserve(mMesh.size());
-  std::transform(mMesh.begin(), mMesh.end(), std::back_inserter(*aResult), [&transform](HomVertex const &aItem){ return transform * aItem; });
+  std::transform(mMesh.begin(), mMesh.end(), std::back_inserter(*aResult), [&transform](Vertex const &aItem){ return transform * aItem; });
 }
 
 fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
@@ -322,7 +321,7 @@ fragor::EigenMeshModel::EigenMeshModel(urdf::Model const &aModel,
 
 float fragor::EigenMeshModel::getJointPosition(Id const aIndex) const {
   if(aIndex >= getRootIndex()) {
-    throw std::invalid_argument("Root limb has no posiiton.");
+    throw std::invalid_argument("Root limb has no position.");
   }
   else {
     return mLimbs[aIndex]->getTransform().mActualJointPosition;
@@ -338,7 +337,7 @@ void fragor::EigenMeshModel::setJointPosition(Id const aIndex, float const aPosi
   }
 }
 
-void fragor::EigenMeshModel::transformLimbMesh(Id const aIndex, std::vector<HomVertex> * const aResult) {
+void fragor::EigenMeshModel::transformLimbMesh(Id const aIndex, std::vector<Vertex> * const aResult) {
   if(aResult != nullptr) {
     mLimbs[aIndex]->transformMesh(aResult);
   }

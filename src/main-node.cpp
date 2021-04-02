@@ -45,7 +45,7 @@ public:
       filename += std::to_string(i);
       filename += csMeshNameSuffix;
       std::ofstream out{filename, std::ios::binary};
-      std::vector<fragor::HomVertex> mesh;
+      std::vector<fragor::Vertex> mesh;
       mEigenModel->transformLimbMesh(i, &mesh);
       ::writeStlBinary(out, mEigenModel->getName(i), mesh);
     }
@@ -62,7 +62,7 @@ public:
     std::string filename{csMeshNamePrefix};
     filename += csMeshNameSuffix;
     std::ofstream out{filename, std::ios::binary};
-    std::vector<fragor::HomVertex> mesh;
+    std::vector<fragor::Vertex> mesh;
     for(fragor::Id i = 0; i < mEigenModel->size(); ++i) {
       mEigenModel->transformLimbMesh(i, &mesh);
     }

@@ -6,7 +6,7 @@
 #include <ostream>
 #include <Eigen/Dense>
 
-void writeStlText(std::ostream &aOut, std::string const &aName, std::vector<Eigen::Vector4f> const &aMesh) {
+void writeStlText(std::ostream &aOut, std::string const &aName, std::vector<Eigen::Vector3f> const &aMesh) {
   aOut << "solid " << aName << '\n';
   for(size_t i = 0; i < aMesh.size(); ) {
     aOut << "facet normal 0.0e+000 0.0e+000 0.0e+000\n  outer loop\n";
@@ -19,7 +19,7 @@ void writeStlText(std::ostream &aOut, std::string const &aName, std::vector<Eige
   aOut << "endsolid " << aName << '\n';
 }
 
-void writeStlBinary(std::ostream &aOut, std::string const &aName, std::vector<Eigen::Vector4f> const &aMesh) {
+void writeStlBinary(std::ostream &aOut, std::string const &aName, std::vector<Eigen::Vector3f> const &aMesh) {
   constexpr std::streamsize cBufferSize = 80;
   char buffer[cBufferSize];
   std::string prefix{"name:"};

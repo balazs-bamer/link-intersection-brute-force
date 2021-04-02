@@ -17,7 +17,6 @@ using Id = int32_t;
 using Transform   = Eigen::Transform<float, 3, Eigen::Affine>;
 using Translation = Eigen::Translation<float, 3>;
 using Quaternion  = Eigen::Quaternion<float>;
-using HomVertex   = Eigen::Vector4f;                           // Last coordinate is 1.
 using Vertex      = Eigen::Vector3f;
 
 class Limb {
@@ -40,7 +39,6 @@ private:
     // 4. Actual rotation for rotate joint. | Actual joint displacement for prismatic joint. - These on urdf::Joint.axis
   };
   static constexpr float                 csEpsilon         = 1e-6f;
-  static constexpr float                 csHomogeneousOne  = 1.0f;
   inline static constexpr char           csStlNamePrefix[] = "package://";
 
   // TODO later incorporate inertia calculated for the whole limb.
@@ -49,7 +47,7 @@ private:
   urdf::LinkConstSharedPtr const                mLocalRootLink;
   urdf::JointSharedPtr     const                mJoint;                 // Joint holding this stuff.
   Limb const *                                  mParent;                // Used to travel backwards for composition.
-  std::vector<HomVertex>                        mMesh;                  // Cumulative, in the mesh coordinate space of the local root link.
+  std::vector<Vertex>                           mMesh;                  // Cumulative, in the mesh coordinate space of the local root link.
   std::unordered_map<Id, Limb const*>           mChildren;              // Maps from the child's local root id to the actual object
   std::unordered_map<Id, ChildTransform>        mChildTransforms;       // Maps from the child's local root id to its transform.
 
@@ -67,15 +65,15 @@ public:
   ChildTransform const&    getTransform() const                  { return mOwnTransform; }
   urdf::LinkConstSharedPtr getLocalRootLink() const              { return mLocalRootLink; }
   void                     setJointPosition(float const aPos)    { mOwnTransform.mActualJointPosition = aPos; }
-  void                     transformMesh(std::vector<HomVertex> * const aResult) const;
+  void                     transformMesh(std::vector<Vertex> * const aResult) const;
 
 private:
-  void                  readMesh(Transform const &aTransform,
+  static void           readMesh(Transform const &aTransform,
                                  std::string const aFilename,
-                                 std::deque<HomVertex> &aMeshes,
+                                 std::deque<Vertex> &aMeshes,
                                  std::string const &aMeshRootDirectory,
                                  urdf::Vector3 const &aScale);
-    void                  collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<HomVertex> &aMeshes, std::string const &aMeshRootDirectory);
+  void                  collectMesh(urdf::CollisionSharedPtr aCollision, std::deque<Vertex> &aMeshes, std::string const &aMeshRootDirectory);
   static Transform      createChildFixedTransform(urdf::JointSharedPtr aJoint);
   static Transform      createFixedTransforms(urdf::Model const &aModel,
                                               Id const aLeafId,
@@ -116,7 +114,7 @@ public:
   float getLimitVelocity(Id const aIndex) const { return mLimbs[aIndex]->getTransform().mJointLimitVelocity; }
   std::string getName(Id const aIndex) const    { return mLimbs[aIndex]->getLocalRootLink()->name; }
 
-  void  transformLimbMesh(Id const aIndex, std::vector<HomVertex> * const aResult);
+  void  transformLimbMesh(Id const aIndex, std::vector<Vertex> * const aResult);
 };
 
 }

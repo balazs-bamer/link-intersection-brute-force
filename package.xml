@@ -2,18 +2,30 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>link-intersection-brute-force</name>
-  <version>0.0.0</version>
+  <version>0.1.0</version>
   <description>Brute-force self-collision check between links moved arbitrarily</description>
   <maintainer email="balazs@bamer.hu">Balázs Bámer</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>gazebo_ros</depend>
   <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>mx_joint_controller_msgs</depend>
 
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>ros2run</exec_depend>
+
+  <!--exec_depend>robot_state_publisher</exec_depend TODO consider -->
+
+  <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
+    <gazebo_ros gazebo_model_path="${prefix}/.." />  <!-- TODO consider -->
+    <gazebo_ros plugin_path="${prefix}" />           <!-- TODO consider -->
   </export>
 </package>

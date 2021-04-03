@@ -7,7 +7,7 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
-  set(CMAKE_C_STANDARD 99)
+  set(CMAKE_C_STANDARD 11)
 endif()
 
 # Default to C++14
@@ -26,9 +26,9 @@ find_package(urdf REQUIRED)
 find_package(gazebo_ros REQUIRED)
 find_package(gazebo_dev REQUIRED)
 find_package(pluginlib REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(sensor_msgs REQUIRED)
+#find_package(mx_joint_controller_msgs REQUIRED)
+
 
 include_directories(
         ${gazebo_INCLUDE_DIRS}
@@ -40,8 +40,14 @@ include_directories(
         /usr/include/eigen3
 )
 
-add_library(gazebo_plugin
-        src/gazebo-plugin.cpp)
+add_library(gazebo_plugin SHARED src/gazebo-plugin.cpp)
+
+ament_target_dependencies(gazebo_plugin
+  "gazebo_ros"
+  "rclcpp"
+  "sensor_msgs")
+#  "mx_joint_controller_msgs")
+
 
 add_executable(linkIntersectionBruteForce
         src/DumpModel.cpp
@@ -56,8 +62,18 @@ target_include_directories(linkIntersectionBruteForce PUBLIC
         )
 #link_directories(${GAZEBO_LIBRARY_DIRS})
 
+install(TARGETS gazebo_plugin
+  DESTINATION share/${PROJECT_NAME})
 install(TARGETS linkIntersectionBruteForce
   DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY meshes
+  DESTINATION share/${PROJECT_NAME})
+install(FILES model.config
+        DESTINATION share/${PROJECT_NAME})
+install(FILES urdf/px150_coll.sdf
+  DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch meshes worlds urdf
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -6,6 +6,7 @@
 #include "gazebo_ros/node.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "urdf/model.h"
+#include <fstream>
 
 namespace LogTopics {
 nowtech::log::TopicInstance system;
@@ -16,13 +17,17 @@ namespace gazebo {
 
 class LinkIntersectionPlugin : public ModelPlugin {
 private:
-  physics::ModelPtr              mPhysicsModel;
+  gazebo::physics::ModelPtr      mModel;
+  gazebo::physics::WorldPtr      mWorld;
   gazebo_ros::Node::SharedPtr    mNode;
   event::ConnectionPtr           mUpdateEvent;
 
   std::vector<std::string>       mJointNames;
   std::vector<physics::JointPtr> mJoints;
   nowtech::log::LogFormatConfig  mLogConfig;
+
+  gazebo::common::Time           mLastSimTime;
+  gazebo::common::Time           mLastUpdateTime;
 
 public:
   LinkIntersectionPlugin() {}
@@ -34,24 +39,27 @@ public:
   }
 
   virtual void Load(physics::ModelPtr aModel, sdf::ElementPtr aSdf)  {
+    mModel = aModel;
+    mWorld = aModel->GetWorld();
+    mNode = gazebo_ros::Node::Get(aSdf);
+//    auto physicsEngine = mWorld->Physics();
+//    physicsEngine->SetParam("friction_model", "cone_model");
     RCLCPP_FATAL_STREAM(
       rclcpp::get_logger("LinkIntersectionPlugin"),
-      "Loading LinkIntersectionPlugin");
+      "XXXXXXXXXXXXX RCLCPP_FATAL_STREAM");
+    RCLCPP_FATAL(mNode->get_logger(), "XXXXXXXXXXXXXXXXXXXXXXX RCLCPP_FATAL");
     LogSender::init();
     Log::init(mLogConfig);
     Log::registerTopic(LogTopics::system, "system");
     Log::registerTopic(LogTopics::dumpModel, "dumpUrdf");
     Log::registerCurrentTask("main");
-    mPhysicsModel = aModel;
-    mNode = gazebo_ros::Node::Get(aSdf);
 
-//    mRosNode.getParam(cLaunchParamPublishPeriod, mPublishPeriod);
-//    gzdbg << "Publish period = " << mPublishPeriod << std::endl;
+    Log::i() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Log::i()" << Log::end;
+    gzdbg << "XXXXXXXXXXXXXXXX gzdbg" << std::endl;
+    std::ofstream out("/tmp/out.txt");
+    out << "XXXXXXXXXXXXXXXXXXXXXXX\n";
 
     mUpdateEvent = event::Events::ConnectWorldUpdateBegin(boost::bind(&LinkIntersectionPlugin::update, this));
-
- //   ros::spinOnce();
-   // ROS_INFO("Started CDPR Plugin for %s.", aModel->GetName().c_str());
   }
 
 private:

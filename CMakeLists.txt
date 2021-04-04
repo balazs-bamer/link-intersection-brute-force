@@ -40,9 +40,9 @@ include_directories(
         /usr/include/eigen3
 )
 
-add_library(gazebo_plugin SHARED src/gazebo-plugin.cpp)
+add_library(gazebo_arm_model_plugin SHARED src/gazebo-plugin.cpp)
 
-ament_target_dependencies(gazebo_plugin
+ament_target_dependencies(gazebo_arm_model_plugin
   "gazebo_ros"
   "rclcpp"
   "sensor_msgs")
@@ -55,32 +55,32 @@ add_executable(linkIntersectionBruteForce
         src/EigenMeshModel.cpp
         src/main-node.cpp)
 ament_target_dependencies(linkIntersectionBruteForce rclcpp urdf)
-target_link_libraries(linkIntersectionBruteForce gazebo_plugin)    # hack
+target_link_libraries(linkIntersectionBruteForce gazebo_arm_model_plugin)    # hack
 target_include_directories(linkIntersectionBruteForce PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
         )
 #link_directories(${GAZEBO_LIBRARY_DIRS})
 
-add_custom_command(TARGET gazebo_plugin POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:gazebo_plugin> share/${PROJECT_NAME})
+add_custom_command(TARGET gazebo_arm_model_plugin POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:gazebo_arm_model_plugin> share/${PROJECT_NAME})
 #add_custom_command(TARGET linkIntersectionBruteForce POST_BUILD
 #        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:linkIntersectionBruteForce> lib/${PROJECT_NAME})
 
 add_custom_command(
-        TARGET gazebo_plugin POST_BUILD
+        TARGET gazebo_arm_model_plugin POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_SOURCE_DIR}/model.config
         ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/model.config)
 
 add_custom_command(
-        TARGET gazebo_plugin POST_BUILD
+        TARGET gazebo_arm_model_plugin POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_SOURCE_DIR}/worlds/empty.world
         ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/empty.world)
 
 add_custom_command(
-        TARGET gazebo_plugin POST_BUILD
+        TARGET gazebo_arm_model_plugin POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_SOURCE_DIR}/urdf/px150_coll.sdf
         ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/px150_coll.sdf)
@@ -89,7 +89,7 @@ file(GLOB files "meshes/px150_meshes/*coll.stl")
 foreach(file ${files})
   get_filename_component(name ${file} NAME)
   add_custom_command(
-          TARGET gazebo_plugin POST_BUILD
+          TARGET gazebo_arm_model_plugin POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E copy
           ${file}
           ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/meshes/px150_meshes/${name})

@@ -41,7 +41,7 @@ def generate_launch_description():
                 executable="spawn_entity.py",
                 arguments=[
                     "-entity",
-                    "link-intersection-brute-force",
+                    "gazebo_arm_model_plugin",
                     "-x",
                     "0",
                     "-y",

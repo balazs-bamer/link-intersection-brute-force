@@ -62,18 +62,38 @@ target_include_directories(linkIntersectionBruteForce PUBLIC
         )
 #link_directories(${GAZEBO_LIBRARY_DIRS})
 
-install(TARGETS gazebo_plugin
-  DESTINATION share/${PROJECT_NAME})
-install(TARGETS linkIntersectionBruteForce
-  DESTINATION lib/${PROJECT_NAME})
-install(DIRECTORY meshes
-  DESTINATION share/${PROJECT_NAME})
-install(FILES model.config
-        DESTINATION share/${PROJECT_NAME})
-install(FILES urdf/px150_coll.sdf
-  DESTINATION share/${PROJECT_NAME})
-install(DIRECTORY launch meshes worlds urdf
-  DESTINATION share/${PROJECT_NAME})
+add_custom_command(TARGET gazebo_plugin POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:gazebo_plugin> share/${PROJECT_NAME})
+#add_custom_command(TARGET linkIntersectionBruteForce POST_BUILD
+#        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:linkIntersectionBruteForce> lib/${PROJECT_NAME})
+
+add_custom_command(
+        TARGET gazebo_plugin POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/model.config
+        ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/model.config)
+
+add_custom_command(
+        TARGET gazebo_plugin POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/worlds/empty.world
+        ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/empty.world)
+
+add_custom_command(
+        TARGET gazebo_plugin POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/urdf/px150_coll.sdf
+        ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/px150_coll.sdf)
+
+file(GLOB files "meshes/px150_meshes/*coll.stl")
+foreach(file ${files})
+  get_filename_component(name ${file} NAME)
+  add_custom_command(
+          TARGET gazebo_plugin POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy
+          ${file}
+          ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/meshes/px150_meshes/${name})
+endforeach()
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

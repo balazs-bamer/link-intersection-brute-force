@@ -10,23 +10,23 @@ from scripts import GazeboRosPaths
 def generate_launch_description():
     model_path, plugin_path, media_path = GazeboRosPaths.get_paths()
 
+    share_prefix = get_package_share_directory("link-intersection-brute-force")
     env = {
-        "GAZEBO_MODEL_PATH": model_path,
+        "GAZEBO_MODEL_PATH": share_prefix,
         "GAZEBO_PLUGIN_PATH": plugin_path,
         "GAZEBO_RESOURCE_PATH": media_path,
     }
+    print(env)
 
-    sdf_prefix = get_package_share_directory("link-intersection-brute-force")
-    sdf_file = os.path.join(sdf_prefix, "px150_coll.sdf")
-
-    world_prefix = get_package_share_directory("link-intersection-brute-force")
-    world_file = os.path.join(world_prefix, "worlds", "empty.world")
+    sdf_file = os.path.join(share_prefix, "px150_coll.sdf")
+    world_file = os.path.join(share_prefix, "empty.world")
 
     return LaunchDescription(
         [
             ExecuteProcess(
                 cmd=[
                     "gazebo",
+                    '--verbose',
                     "-s",
                     "libgazebo_ros_init.so",
                     "-s",

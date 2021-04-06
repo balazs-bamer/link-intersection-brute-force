@@ -65,7 +65,7 @@ target_include_directories(linkIntersectionBruteForce PUBLIC
 add_custom_command(TARGET gazebo_arm_model_plugin POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:gazebo_arm_model_plugin> share/${PROJECT_NAME})
 #add_custom_command(TARGET linkIntersectionBruteForce POST_BUILD
-#        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:linkIntersectionBruteForce> lib/${PROJECT_NAME})
+#          COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:linkIntersectionBruteForce> lib/${PROJECT_NAME})
 
 add_custom_command(
         TARGET gazebo_arm_model_plugin POST_BUILD

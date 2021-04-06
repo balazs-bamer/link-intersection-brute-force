@@ -1,6 +1,5 @@
 <sdf version='1.7'>
   <model name='px150'>
-    <static>false</static>
     <joint name='fix_to_world' type='fixed'>
       <pose relative_to='__model__'>0 0 0 0 -0 0</pose>
       <parent>world</parent>
@@ -479,5 +478,7 @@
         </geometry>
       </visual>
     </link>
+    <static>0</static>
+    <plugin name='gazebo_arm_model_plugin' filename='install/link-intersection-brute-force/lib/link-intersection-brute-force/libgazebo_arm_model_plugin.so'/>
   </model>
 </sdf>

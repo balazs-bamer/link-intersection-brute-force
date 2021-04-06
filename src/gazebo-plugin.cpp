@@ -6,7 +6,6 @@
 #include "gazebo_ros/node.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "urdf/model.h"
-#include <fstream>
 
 namespace LogTopics {
 nowtech::log::TopicInstance system;
@@ -44,10 +43,6 @@ public:
     mNode = gazebo_ros::Node::Get(aSdf);
 //    auto physicsEngine = mWorld->Physics();
 //    physicsEngine->SetParam("friction_model", "cone_model");
-    RCLCPP_FATAL_STREAM(
-      rclcpp::get_logger("LinkIntersectionPlugin"),
-      "XXXXXXXXXXXXX RCLCPP_FATAL_STREAM");
-    RCLCPP_FATAL(mNode->get_logger(), "XXXXXXXXXXXXXXXXXXXXXXX RCLCPP_FATAL");
     LogSender::init();
     Log::init(mLogConfig);
     Log::registerTopic(LogTopics::system, "system");
@@ -55,9 +50,7 @@ public:
     Log::registerCurrentTask("main");
 
     Log::i() << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Log::i()" << Log::end;
-    gzdbg << "XXXXXXXXXXXXXXXX gzdbg" << std::endl;
-    std::ofstream out("/tmp/out.txt");
-    out << "XXXXXXXXXXXXXXXXXXXXXXX\n";
+    // TODO find out how to shut down log
 
     mUpdateEvent = event::Events::ConnectWorldUpdateBegin(boost::bind(&LinkIntersectionPlugin::update, this));
   }

@@ -71,7 +71,7 @@ add_custom_command(
         TARGET gazebo_arm_model_plugin POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_SOURCE_DIR}/model.config
-        ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/model.config)
+        ${CMAKE_CURRENT_BINARY_DIR}/../../share/${PROJECT_NAME}/models/model.config)
 
 add_custom_command(
         TARGET gazebo_arm_model_plugin POST_BUILD

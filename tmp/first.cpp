@@ -256,7 +256,7 @@ bool hasCommonPoint(CudaConstTriangle const aShape1, CudaConstTriangle const aSh
   }
   else {
     Eigen::Vector3f intersectionVector = shape1normal.cross(shape2normal);
-    if(intersectionVector.norm() > cgEpsilon && signumShape1FromPlane2 != cgSignumAllZero && signumShape2FromPlane1 != cgSignumAllZero) { // Real intersection, planes are not identical, and both triangles touch the common line.
+    if(fabs(intersectionVector.norm()) > cgEpsilon && signumShape1FromPlane2 != cgSignumAllZero && signumShape2FromPlane1 != cgSignumAllZero) { // Real intersection, planes are not identical, and both triangles touch the common line.
       intersectionVector.normalize();
       float intersectionParameterAshape1;
       float intersectionParameterBshape1;
